@@ -12,24 +12,34 @@ export class Lexer {
 	private input: string;
 	private position: number;
 	private ch: string; //currentChar
-	private keywords: Record<string, TokenType> = {
-		"P:": TokenType.Premise,
-		"C:": TokenType.Conclusion,
-		IF: TokenType.IF,
-		THEN: TokenType.THEN,
-		NOT: TokenType.NOT,
-	};
 	private state: LexerState = LexerState.EXPECTING_LABEL;
+	private line = 1; // Track line number for debugging
+	private column = 1; // Track column number for debugging
+	private knownLabel: Record<string, TokenType> = {
+		PREMISE: TokenType.PREMISE,
+		THEREFORE: TokenType.THEREFORE,
+	};
 	private logicalKeywords: Record<string, TokenType> = {
-		IF: TokenType.IF,
-		THEN: TokenType.THEN,
-		NOT: TokenType.NOT,
-		AND: TokenType.AND,
-		OR: TokenType.OR,
+		ALL: TokenType.ALL,
+		SOME: TokenType.SOME,
+		NO: TokenType.NO,
+		IS: TokenType.IS,
+		IMPLIES: TokenType.IMPLIES,
+		CAN: TokenType.CAN,
+		EXISTS: TokenType.EXISTS,
+		FORALL: TokenType.FORALL,
+	};
+	private symbols: Record<string, TokenType> = {
+		"(": TokenType.LPAREN,
+		")": TokenType.RPAREN,
+		",": TokenType.COMMA,
+		".": TokenType.PERIOD,
+		":": TokenType.COLON,
+		";": TokenType.SEMICOLON,
 	};
 
 	constructor(input: string) {
-		this.input = input.toUpperCase();
+		this.input = input;
 		this.position = 0;
 		this.ch = this.input[this.position];
 	}
@@ -40,33 +50,17 @@ export class Lexer {
 		switch (this.state) {
 			case LexerState.EXPECTING_LABEL: {
 				// Expecting a label like "P:" or "C:"
-				if (this.ch === "P" && this.peekChar() === ":") {
+				this.skipWhitespace();
+				const word = this.peekNextWord();
+				log.debug("Expecting label, current word:", word);
+				if (word in this.knownLabel) {
 					tok = {
-						Type: TokenType.Premise,
+						Type: this.knownLabel[word],
 					};
-					this.state = LexerState.EXPECTING_STATEMENT;
-					this.position += 2; // Skip the "P:"
+					this.position += word.length; // Move position past the known
 					this.ch = this.input[this.position]; // Update current char
-					log.debug("Tokenized Premise", {
-						input: this.input,
-						position: this.position,
-						state: this.state,
-					});
-					return tok;
-				}
+					this.state = LexerState.EXPECTING_STATEMENT; // Move to next state
 
-				if (this.ch === "C" && this.peekChar() === ":") {
-					tok = {
-						Type: TokenType.Conclusion,
-					};
-					this.state = LexerState.EXPECTING_STATEMENT;
-					this.position += 2; // Skip the "C:"
-					this.ch = this.input[this.position]; // Update current char
-					log.debug("Tokenized Conclusion", {
-						input: this.input,
-						position: this.position,
-						state: this.state,
-					});
 					return tok;
 				}
 
@@ -75,20 +69,13 @@ export class Lexer {
 			case LexerState.EXPECTING_STATEMENT: {
 				log.debug("Expecting statement, current char:", this.ch);
 				this.skipWhitespace();
-				// expecting something like "IF", ""
-				if (this.ch === "I" && this.peekChar() === "F") {
-					tok = {
-						Type: TokenType.IF,
-					};
-					this.state = LexerState.IN_LOGICAL_EXPRESSION;
-					this.position += 2; // Skip the "IF"
-					this.ch = this.input[this.position]; // Update current char
-					log.debug("Tokenized IF", {
-						input: this.input,
-						position: this.position,
-						state: this.state,
-					});
-					return tok;
+				// expecting something like ALL, SOME, NO, IS, ARE, etc.
+				const word = this.peekNextWord();
+				log.debug("Next word in statement:", word);
+				if (word in this.logicalKeywords) {
+					// if the next word is a logical keyword, read it and update the state to expect identifier
+					this.state = LexerState.IN_IDENTIFIER;
+					return this.readWord(this.logicalKeywords[word]);
 				}
 
 				// otherwise, read an identifier
@@ -114,12 +101,15 @@ export class Lexer {
 	// HELPER ====================
 	private peekNextWord(): string {
 		const lastPos = this.position;
+		let wordPos = this.position;
+		let ch = this.ch;
 
-		while (this.ch && isLetter(this.ch)) {
-			this.readChar();
+		while (ch && isLetter(ch)) {
+			wordPos += 1;
+			ch = this.input[wordPos];
 		}
 
-		return this.input.slice(lastPos, this.position);
+		return this.input.slice(lastPos, wordPos);
 	}
 
 	private readWord(expectedType: TokenType): Token {
@@ -147,30 +137,55 @@ export class Lexer {
 			};
 		}
 
+		const word = this.peekNextWord();
+
+		// if the next word is not a symbol, it must be an identifier
+		if (!this.symbols[word] && word.length > 0) {
+			// letters of identifier found
+			// NOTE: there's some problem regarding the tokentype here. The type here isn't always IDENTIFIER, it could be a quantifier or logical keyword.
+			log.debug("Found identifier word:", word);
+			return this.readWord(this.logicalKeywords[word] || TokenType.IDENTIFIER);
+		}
+
 		while (this.ch) {
 			console.debug("Reading identifier, current char:", this.ch);
 			switch (this.ch) {
-				case "\n": {
+				case ";": {
 					this.readChar();
 					this.state = LexerState.EXPECTING_LABEL; // reset
 					return {
-						Type: TokenType.NEWLINE,
+						Type: TokenType.SEMICOLON,
+					};
+				}
+				case "(": {
+					this.readChar();
+					return {
+						Type: TokenType.LPAREN,
+					};
+				}
+				case ")": {
+					this.readChar();
+					return {
+						Type: TokenType.RPAREN,
 					};
 				}
 				case ",": {
-					// handle case when we are in the middle of reading an identifier and suddenly encounter a comma...
-					if (this.position !== startpost) {
-						console.debug("Found comma, current position:", this.position);
-						return {
-							Type: TokenType.IDENT,
-							Value: this.input.slice(startpost, this.position),
-						};
-					}
-
-					console.debug("Reading comma, current position:", this.position);
 					this.readChar();
 					return {
 						Type: TokenType.COMMA,
+					};
+				}
+				case ".": {
+					this.readChar();
+					return {
+						Type: TokenType.PERIOD,
+					};
+				}
+				case ":": {
+					this.readChar();
+					this.state = LexerState.IN_LOGICAL_EXPRESSION;
+					return {
+						Type: TokenType.COLON,
 					};
 				}
 			}
@@ -180,7 +195,7 @@ export class Lexer {
 		}
 
 		return {
-			Type: TokenType.IDENT,
+			Type: TokenType.IDENTIFIER,
 			Value: this.input.slice(startpost, this.position),
 		};
 	}
@@ -193,7 +208,12 @@ export class Lexer {
 	}
 
 	private skipWhitespace() {
-		while (this.ch === " " || this.ch === "\t" || this.ch === "\r") {
+		while (
+			this.ch === " " ||
+			this.ch === "\t" ||
+			this.ch === "\r" ||
+			this.ch === "\n"
+		) {
 			this.readChar();
 		}
 	}
@@ -206,11 +226,11 @@ export class Lexer {
 		}
 	}
 
-	private lookupIdent(ident: string): TokenType {
-		if (ident in this.keywords) {
-			return this.keywords[ident];
-		}
+	// private lookupIdent(ident: string): TokenType {
+	// 	if (ident in this.keywords) {
+	// 		return this.keywords[ident];
+	// 	}
 
-		return TokenType.IDENT;
-	}
+	// 	return TokenType.IDENT;
+	// }
 }
