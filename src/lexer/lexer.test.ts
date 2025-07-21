@@ -1,5 +1,5 @@
+import { TokenType } from "../types/token";
 import { Lexer } from "./lexer";
-import { TokenType } from "./type";
 
 describe("Lexer", () => {
 	it("should tokenize symbols ((),.:;)", () => {

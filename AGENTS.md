@@ -16,28 +16,29 @@ Valid8 is a TypeScript-based toolkit for parsing and verifying mathematical logi
 - `src/lexer.ts`: Core lexer/state machine and tokenization logic
 - `src/type.ts`: TokenType enum and Token interface
 - `src/util.ts`: Logging and character utilities
-- `src/lexer.test.ts`: Jest tests
-- `package.json`: Project metadata and scripts
+- `src/lexer.test.ts`: Jest lexer tests
+- `src/parser.ts`: Parser stub (empty)
+- `src/parser.test.ts`: Parser test stub (empty)
+- `package.json`: Project metadata, scripts, and test setup (see below)
 - `tsconfig.json`: TypeScript setup
 - `todo.html`: Roadmap, priorities, phased goals, and notes
-- `Architecture.md`: Quick project introduction
-- `OpenCode.md`: Internal engineering/agentic notes
+- `OpenCode.md`: Internal engineering/agentic notes (agentic/debug/test instructions)
 
 ## 4. Development & Testing Workflow
-- **Install dependencies:**  
+- **Install dependencies:**
   `npm install`
-- **Run tests:**  
-  `npm test` (runs Jest with ts-jest)
-- **Add new tests:**  
-  Place new `.test.ts` files alongside implementation files in `src/`. Use Jest syntax.
-- **Type check:**  
+- **Run tests:**
+  `npm test` (runs Jest with ts-jest, see `package.json`)
+- **Add new tests:**
+  Place new `.test.ts` files alongside implementation files in `src/`. Use Jest syntax. Lexer is covered in `lexer.test.ts`, parser is stubbed only.
+- **Type check:**
   `npx tsc --noEmit` to type-check the codebase.
-- **Debugging:**  
-  Enable verbose debug output by running with `VALID8_DEBUG=1` as an environment variable. All `log.debug` messages will be printed.
-- **Linting:**  
-  *(No linter is currently configured; consider adding ESLint for code consistency.)*
-- **Build/Run:**  
-  There is no build step yet; all logic is run and tested via Jest/TypeScript.
+- **Debugging:**
+  Enable verbose debug output by running with `VALID8_DEBUG=1` as an environment variable. All `log.debug` messages will be printed (see `src/util.ts`).
+- **Linting:**
+  *(No linter is currently configured; consider adding ESLint for code consistency in future phases.)*
+- **Build/Run:**
+  There is no build step yet; all logic is run and tested via Jest/TypeScript. CLI/UI not yet started (see roadmap).
 
 ## 5. Logging & Debugging
 - Use the custom `log` object from `src/util.ts` for all debug/info/error output. This respects the `VALID8_DEBUG` variable.
@@ -53,20 +54,21 @@ Valid8 is a TypeScript-based toolkit for parsing and verifying mathematical logi
 - Follow the logging pattern (see `log` in util.ts) for all application-level output.
 
 ## 7. Maintenance & Extension Tips
-- **Extending the lexer**: Add new token types to `src/type.ts`. Update the state machine in `src/lexer.ts` to recognize new patterns. Write tests before/after changes.
-- **Parser**: The parser is not yet implemented—see `todo.html` and the roadmap for parser design and priorities. Start by drafting a grammar and recursive descent parser skeleton.
-- **Testing**: Always add edge-case tests for new language features or tokens. Use real logic statements as test cases.
-- **Documentation**: Expand this document and Architecture.md with any new modules, features, or tricky behaviors as you add them.
+- **Extending the lexer**: Add new token types to `src/type.ts`. Update the state machine in `src/lexer.ts` to recognize new patterns. Write tests before/after changes. Lexer improvements are the top priority (see `todo.html` Phase 1).
+- **Parser (`src/parser.ts`, `src/parser.test.ts`)**: Parser skeleton files exist but currently have no logic. See `todo.html` and the roadmap for parser design and priorities. Start by drafting a grammar and recursive descent parser skeleton as described in the roadmap.
+- **Testing**: Always add edge-case tests for new language features or tokens. Use real logic statements as test cases. Jest is configured for all `.test.ts` in `src/` (see `package.json` and `OpenCode.md`).
+- **Documentation**: Expand this document and create or update Architecture.md with any new modules, features, or tricky behaviors as you add them.
 - **Error Handling**: Lexer returns EOF/NEWLINE tokens on end-of-input; consider extending with richer error handling for malformed logic as parser is implemented.
-- **Roadmap**: Align new work with `todo.html` phases (Lexer, Parser, Verification Engine, UI, Testing/Docs).
+- **Debugging/Logging**: Use `log.debug`/`log.info`/`log.error` from `src/util.ts` for contextual logging (see `OpenCode.md`).
+- **Roadmap**: Align new work with `todo.html` phases (Lexer, Parser, Verification Engine, UI, Testing/Docs). See key implementation notes at the end of `todo.html`.
 
 ## 8. Known Limitations, TODOs, & Open Issues
-- **Parser, engine, and CLI not implemented** (see `todo.html` for phases 2–5)
-- **Lexer improvements needed**: whitespace, punctuation, and context-aware keyword/identifier handling are still in progress
-- **No linter configured**
-- **No build/deploy scripts yet**
-- **No user-facing documentation or examples yet**
-- **Testing**: Focus is on lexer; integration tests and parser tests are pending
+- **Parser, engine, and CLI not implemented**: Parser skeleton exists but no logic. Engine, CLI, UI, and file I/O are not started (see `todo.html` for phases 2–5).
+- **Lexer improvements needed**: Whitespace, punctuation, and context-aware keyword/identifier handling are still in progress and are the highest priority for enabling the parser and later phases.
+- **No linter configured**: Codebase consistency is manual.
+- **No build/deploy scripts yet**: Only test/typecheck scripts in `package.json`.
+- **No user-facing documentation or examples yet**: Only code and comments. Please update this AGENTS.md and create API/user docs as new features are added.
+- **Testing**: Focus is on lexer; parser and integration tests are stubs only.
 
 **See `todo.html` for a detailed, prioritized list of future tasks and notes.**
 

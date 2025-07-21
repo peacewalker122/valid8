@@ -1,5 +1,6 @@
-import { type Token, TokenType } from "./type";
-import { isLetter, log } from "./util";
+import { type Token, TokenType } from "../types/token";
+import { log } from "../util/log";
+import { isLetter } from "../util/util";
 
 enum LexerState {
 	EXPECTING_LABEL, // Looking for "P:" or "C:"
