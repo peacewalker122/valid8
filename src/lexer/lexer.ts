@@ -123,7 +123,7 @@ export class Lexer {
 
 		return {
 			Type: expectedType,
-			Value: this.input.slice(lastPos, this.position),
+			Literal: this.input.slice(lastPos, this.position),
 		};
 	}
 
@@ -197,7 +197,7 @@ export class Lexer {
 
 		return {
 			Type: TokenType.IDENTIFIER,
-			Value: this.input.slice(startpost, this.position),
+			Literal: this.input.slice(startpost, this.position),
 		};
 	}
 

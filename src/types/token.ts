@@ -1,3 +1,5 @@
+// This file defines the TokenType enum and the Token interface used in the logical reasoning system.
+// Genrally, tokens represent the various components of logical statements, such as premises, conclusions, operators, and identifiers.
 export enum TokenType {
 	// LABEL
 	PREMISE = "PREMISE",
@@ -31,5 +33,5 @@ export enum TokenType {
 
 export interface Token {
 	Type: TokenType;
-	Value?: string | null;
+	Literal?: string | null;
 }

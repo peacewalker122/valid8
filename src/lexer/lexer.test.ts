@@ -23,12 +23,14 @@ describe("Lexer", () => {
 		expect(lexer.GetNextToken().Type).toBe(TokenType.LPAREN);
 		const ident1 = lexer.GetNextToken();
 		expect(ident1.Type).toBe(TokenType.IDENTIFIER);
-		expect(ident1.Value).toBe("cat");
+		expect(ident1.Literal).toBe("cat");
 		expect(lexer.GetNextToken().Type).toBe(TokenType.COMMA);
 		const ident2 = lexer.GetNextToken();
 		expect(ident2.Type).toBe(TokenType.IDENTIFIER);
-		expect(ident2.Value).toBe("animal");
+		expect(ident2.Literal).toBe("animal");
 		expect(lexer.GetNextToken().Type).toBe(TokenType.RPAREN);
+		expect(lexer.GetNextToken().Type).toBe(TokenType.SEMICOLON);
+		expect(lexer.GetNextToken().Type).toBe(TokenType.EOF);
 	});
 
 	it("should tokenize complex PREMISE: SOME(cat, EXISTS(animal, dog));", () => {
@@ -39,20 +41,21 @@ describe("Lexer", () => {
 		expect(lexer.GetNextToken().Type).toBe(TokenType.LPAREN);
 		const ident1 = lexer.GetNextToken();
 		expect(ident1.Type).toBe(TokenType.IDENTIFIER);
-		expect(ident1.Value).toBe("cat");
+		expect(ident1.Literal).toBe("cat");
 		expect(lexer.GetNextToken().Type).toBe(TokenType.COMMA);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.EXISTS);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.LPAREN);
 		const ident2 = lexer.GetNextToken();
 		expect(ident2.Type).toBe(TokenType.IDENTIFIER);
-		expect(ident2.Value).toBe("animal");
+		expect(ident2.Literal).toBe("animal");
 		expect(lexer.GetNextToken().Type).toBe(TokenType.COMMA);
 		const ident3 = lexer.GetNextToken();
 		expect(ident3.Type).toBe(TokenType.IDENTIFIER);
-		expect(ident3.Value).toBe("dog");
+		expect(ident3.Literal).toBe("dog");
 		expect(lexer.GetNextToken().Type).toBe(TokenType.RPAREN);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.RPAREN);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.SEMICOLON);
+		expect(lexer.GetNextToken().Type).toBe(TokenType.EOF);
 	});
 
 	it("should tokenize long and complex", () => {
@@ -68,11 +71,11 @@ describe("Lexer", () => {
 		expect(lexer.GetNextToken().Type).toBe(TokenType.LPAREN);
 		const ident1 = lexer.GetNextToken();
 		expect(ident1.Type).toBe(TokenType.IDENTIFIER);
-		expect(ident1.Value).toBe("cat");
+		expect(ident1.Literal).toBe("cat");
 		expect(lexer.GetNextToken().Type).toBe(TokenType.COMMA);
 		const ident2 = lexer.GetNextToken();
 		expect(ident2.Type).toBe(TokenType.IDENTIFIER);
-		expect(ident2.Value).toBe("animal");
+		expect(ident2.Literal).toBe("animal");
 		expect(lexer.GetNextToken().Type).toBe(TokenType.RPAREN);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.SEMICOLON);
 
@@ -82,17 +85,17 @@ describe("Lexer", () => {
 		expect(lexer.GetNextToken().Type).toBe(TokenType.LPAREN);
 		const ident3 = lexer.GetNextToken();
 		expect(ident3.Type).toBe(TokenType.IDENTIFIER);
-		expect(ident3.Value).toBe("cat");
+		expect(ident3.Literal).toBe("cat");
 		expect(lexer.GetNextToken().Type).toBe(TokenType.COMMA);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.EXISTS);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.LPAREN);
 		const ident4 = lexer.GetNextToken();
 		expect(ident4.Type).toBe(TokenType.IDENTIFIER);
-		expect(ident4.Value).toBe("animal");
+		expect(ident4.Literal).toBe("animal");
 		expect(lexer.GetNextToken().Type).toBe(TokenType.COMMA);
 		const ident5 = lexer.GetNextToken();
 		expect(ident5.Type).toBe(TokenType.IDENTIFIER);
-		expect(ident5.Value).toBe("dog");
+		expect(ident5.Literal).toBe("dog");
 		expect(lexer.GetNextToken().Type).toBe(TokenType.RPAREN);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.RPAREN);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.SEMICOLON);
@@ -103,11 +106,11 @@ describe("Lexer", () => {
 		expect(lexer.GetNextToken().Type).toBe(TokenType.LPAREN);
 		const ident6 = lexer.GetNextToken();
 		expect(ident6.Type).toBe(TokenType.IDENTIFIER);
-		expect(ident6.Value).toBe("cat");
+		expect(ident6.Literal).toBe("cat");
 		expect(lexer.GetNextToken().Type).toBe(TokenType.COMMA);
 		const ident7 = lexer.GetNextToken();
 		expect(ident7.Type).toBe(TokenType.IDENTIFIER);
-		expect(ident7.Value).toBe("dog");
+		expect(ident7.Literal).toBe("dog");
 		expect(lexer.GetNextToken().Type).toBe(TokenType.RPAREN);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.SEMICOLON);
 
@@ -117,12 +120,33 @@ describe("Lexer", () => {
 		expect(lexer.GetNextToken().Type).toBe(TokenType.LPAREN);
 		const ident8 = lexer.GetNextToken();
 		expect(ident8.Type).toBe(TokenType.IDENTIFIER);
-		expect(ident8.Value).toBe("cat");
+		expect(ident8.Literal).toBe("cat");
 		expect(lexer.GetNextToken().Type).toBe(TokenType.COMMA);
 		const ident9 = lexer.GetNextToken();
 		expect(ident9.Type).toBe(TokenType.IDENTIFIER);
-		expect(ident9.Value).toBe("dog");
+		expect(ident9.Literal).toBe("dog");
 		expect(lexer.GetNextToken().Type).toBe(TokenType.RPAREN);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.SEMICOLON);
+		expect(lexer.GetNextToken().Type).toBe(TokenType.EOF);
+	});
+
+	it("should tokenize logical expression without quantifiers", () => {
+		const lexer = new Lexer("IS(cat, animal);");
+		expect(lexer.GetNextToken().Type).toBe(TokenType.IS);
+		expect(lexer.GetNextToken().Type).toBe(TokenType.LPAREN);
+
+		const ident1 = lexer.GetNextToken();
+		expect(ident1.Type).toBe(TokenType.IDENTIFIER);
+		expect(ident1.Literal).toBe("cat");
+
+		expect(lexer.GetNextToken().Type).toBe(TokenType.COMMA);
+
+		const ident2 = lexer.GetNextToken();
+		expect(ident2.Type).toBe(TokenType.IDENTIFIER);
+		expect(ident2.Literal).toBe("animal");
+
+		expect(lexer.GetNextToken().Type).toBe(TokenType.RPAREN);
+		expect(lexer.GetNextToken().Type).toBe(TokenType.SEMICOLON);
+		expect(lexer.GetNextToken().Type).toBe(TokenType.EOF);
 	});
 });

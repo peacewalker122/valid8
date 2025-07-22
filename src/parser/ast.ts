@@ -13,12 +13,7 @@ abstract class Argument extends Vertex {
 }
 
 class Program extends Vertex {
-	private predicates: Statement[] = [];
-
-	constructor(predicates: Statement[]) {
-		super();
-		this.predicates = predicates;
-	}
+	public predicates: Statement[] = [];
 
 	TokenLiteral(): string {
 		if (this.predicates.length > 0) {
@@ -29,12 +24,11 @@ class Program extends Vertex {
 	}
 }
 
-class Premise extends Statement {
-	constructor(
-		private token: TokenType,
-		private identifier: Identifier,
-		private value: Argument,
-	) {
+class LogicalOperators extends Statement {
+	public name: Identifier | undefined;
+	public value: Argument[] | undefined; // WARN: could contain other function as well but should can be ignored in this case.
+
+	constructor(public token: Token) {
 		super();
 	}
 
@@ -43,7 +37,7 @@ class Premise extends Statement {
 	}
 
 	TokenLiteral(): string {
-		return this.token;
+		return this.token.Literal ?? this.token.Type;
 	}
 }
 
@@ -60,6 +54,8 @@ class Identifier extends Argument {
 	}
 
 	TokenLiteral(): string {
-		return this.token;
+		return this.value;
 	}
 }
+
+export { Vertex, Statement, Argument, Program, LogicalOperators, Identifier };
