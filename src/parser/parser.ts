@@ -1,12 +1,6 @@
 import type { Lexer } from "../lexer/lexer";
 import { TokenType, type Token } from "../types/token";
-import {
-	Argument,
-	Identifier,
-	LogicalOperators,
-	Program,
-	Statement,
-} from "./ast";
+import { Identifier, LogicalOperators, Program, type Statement } from "./ast";
 
 enum TokenGroup {
 	LOGICAL,
@@ -17,6 +11,7 @@ export class Parser {
 	private lexer: Lexer;
 	private curToken: Token;
 	private peekToken: Token;
+	public error: string[];
 
 	private TokenComponents: Record<string, TokenGroup> = {
 		ALL: TokenGroup.LOGICAL,
@@ -36,6 +31,8 @@ export class Parser {
 		this.curToken = this.peekToken;
 
 		this.peekToken = this.lexer.GetNextToken(); // lsp rewel
+
+		this.error = [];
 	}
 
 	/**
@@ -47,7 +44,7 @@ export class Parser {
 	}
 
 	public parseProgram(): Program {
-		let ast: Program = new Program();
+		const ast: Program = new Program();
 
 		while (this.curToken.Type !== TokenType.EOF) {
 			let statement: Statement | undefined;
@@ -73,9 +70,16 @@ export class Parser {
 
 	private parseLogicalExpression(token: Token): LogicalOperators | undefined {
 		const exprs = new LogicalOperators(token);
+		if (!this.peekCheck(TokenType.LPAREN)) {
+			return undefined;
+		}
+
 		this.nextToken(); // current-token = (
 
 		if (!this.expectPeek(TokenType.IDENTIFIER)) {
+			this.error.push(
+				`Expected IDENTIFIER after LPAREN, got ${this.peekToken.Type}`,
+			);
 			return undefined;
 		}
 		this.nextToken(); // current-token = IDENTIFIER
@@ -86,20 +90,53 @@ export class Parser {
 		);
 
 		if (!this.expectPeek(TokenType.COMMA)) {
+			this.error.push(
+				`Expected COMMA after IDENTIFIER, got ${this.peekToken.Type}`,
+			);
 			return undefined;
 		}
 		this.nextToken(); // current-token = COMMA
+
+		if (!this.expectPeek(TokenType.IDENTIFIER)) {
+			this.error.push(
+				`Expected IDENTIFIER after COMMA, got ${this.peekToken.Type}`,
+			);
+			return undefined;
+		}
 		this.nextToken(); // current-token = IDENTIFIER
 
 		let values: Identifier[] = [];
 		values = [new Identifier(this.curToken.Type, this.curToken.Literal ?? "")];
 		exprs.value = values;
 
-		while (!this.curTokenIs(TokenType.RPAREN)) {
+		// check if they're going to EOF and still not found the RPAREN
+		let foundRPAREN = false;
+		while (
+			!this.curTokenIs(TokenType.RPAREN) &&
+			!this.curTokenIs(TokenType.SEMICOLON) // mean we are at the end of the statement
+		) {
 			this.nextToken();
+
+			if (this.curTokenIs(TokenType.RPAREN)) {
+				foundRPAREN = true;
+				break;
+			}
+		}
+
+		if (!foundRPAREN) {
+			this.error.push(`Expected RPAREN but got ${this.curToken.Type}`);
+			return undefined;
 		}
 
 		return exprs;
+	}
+
+	private peekCheck(expectedType: TokenType): boolean {
+		if (this.peekToken.Type === expectedType) {
+			return true;
+		}
+		this.error.push(`Expected ${expectedType} but got ${this.peekToken.Type}`);
+		return false;
 	}
 
 	private expectPeek(expectedType: TokenType): boolean {
