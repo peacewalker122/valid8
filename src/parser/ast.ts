@@ -26,7 +26,7 @@ class Program extends Vertex {
 
 class LogicalOperators extends Statement {
 	public name: Identifier | undefined;
-	public value: Argument[] | undefined; // WARN: could contain other function as well but should can be ignored in this case.
+	public value: Argument | undefined; // WARN: could contain other function as well but should can be ignored in this case.
 
 	constructor(public token: Token) {
 		super();
@@ -38,6 +38,22 @@ class LogicalOperators extends Statement {
 
 	TokenLiteral(): string {
 		return this.token.Literal ?? this.token.Type;
+	}
+}
+
+class Quantifier extends Statement {
+	public name: Identifier | undefined;
+	public value: Argument | undefined; // WARN: could contain other function as well but should can be ignored in this case.
+
+	constructor(public token: Token) {
+		super();
+	}
+
+	statementNode(): void {
+		throw new Error("Method not implemented.");
+	}
+	TokenLiteral(): string {
+		throw new Error("Method not implemented.");
 	}
 }
 
@@ -58,4 +74,12 @@ class Identifier extends Argument {
 	}
 }
 
-export { Vertex, Statement, Argument, Program, LogicalOperators, Identifier };
+export {
+	Vertex,
+	Statement,
+	Argument,
+	Program,
+	LogicalOperators,
+	Identifier,
+	Quantifier,
+};

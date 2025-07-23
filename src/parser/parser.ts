@@ -1,6 +1,12 @@
 import type { Lexer } from "../lexer/lexer";
 import { TokenType, type Token } from "../types/token";
-import { Identifier, LogicalOperators, Program, type Statement } from "./ast";
+import {
+	Identifier,
+	LogicalOperators,
+	Program,
+	Quantifier,
+	type Statement,
+} from "./ast";
 
 enum TokenGroup {
 	LOGICAL,
@@ -54,8 +60,12 @@ export class Parser {
 					statement = this.parseLogicalExpression(this.curToken);
 					break;
 				}
-				default:
-					console.error("not yet implemented");
+				case TokenGroup.QUANTIFIER: {
+					statement = this.parseQuantifierExpression(this.curToken);
+					break;
+				}
+				// default:
+				// 	console.error("not yet implemented");
 			}
 
 			if (statement !== undefined) {
@@ -66,6 +76,70 @@ export class Parser {
 		}
 
 		return ast;
+	}
+
+	private parseQuantifierExpression(token: Token): Quantifier | undefined {
+		const exprs = new Quantifier(token);
+		if (!this.peekCheck(TokenType.LPAREN)) {
+			return undefined;
+		}
+
+		this.nextToken(); // current-token = (
+
+		if (!this.expectPeek(TokenType.IDENTIFIER)) {
+			this.error.push(
+				`Expected IDENTIFIER after LPAREN, got ${this.peekToken.Type}`,
+			);
+			return undefined;
+		}
+		this.nextToken(); // current-token = IDENTIFIER
+
+		exprs.name = new Identifier(
+			this.curToken.Type,
+			this.curToken.Literal ?? "",
+		);
+
+		if (!this.expectPeek(TokenType.COMMA)) {
+			this.error.push(
+				`Expected COMMA after IDENTIFIER, got ${this.peekToken.Type}`,
+			);
+			return undefined;
+		}
+		this.nextToken(); // current-token = COMMA
+
+		if (!this.expectPeek(TokenType.IDENTIFIER)) {
+			this.error.push(
+				`Expected IDENTIFIER after COMMA, got ${this.peekToken.Type}`,
+			);
+			return undefined;
+		}
+		this.nextToken(); // current-token = IDENTIFIER
+
+		exprs.value = new Identifier(
+			this.curToken.Type,
+			this.curToken.Literal ?? "",
+		);
+
+		// check if they're going to EOF and still not found the RPAREN
+		let foundRPAREN = false;
+		while (
+			!this.curTokenIs(TokenType.RPAREN) &&
+			!this.curTokenIs(TokenType.SEMICOLON) // mean we are at the end of the statement
+		) {
+			this.nextToken();
+
+			if (this.curTokenIs(TokenType.RPAREN)) {
+				foundRPAREN = true;
+				break;
+			}
+		}
+
+		if (!foundRPAREN) {
+			this.error.push(`Expected RPAREN but got ${this.curToken.Type}`);
+			return undefined;
+		}
+
+		return exprs;
 	}
 
 	private parseLogicalExpression(token: Token): LogicalOperators | undefined {
@@ -105,9 +179,10 @@ export class Parser {
 		}
 		this.nextToken(); // current-token = IDENTIFIER
 
-		let values: Identifier[] = [];
-		values = [new Identifier(this.curToken.Type, this.curToken.Literal ?? "")];
-		exprs.value = values;
+		exprs.value = new Identifier(
+			this.curToken.Type,
+			this.curToken.Literal ?? "",
+		);
 
 		// check if they're going to EOF and still not found the RPAREN
 		let foundRPAREN = false;

@@ -1,9 +1,35 @@
 import { Lexer } from "../lexer/lexer";
 import { TokenType } from "../types/token";
-import type { LogicalOperators } from "./ast";
+import type { LogicalOperators, Quantifier } from "./ast";
 import { Parser } from "./parser";
 
 describe("Parser", () => {
+	it("should parse quantifier expressions", () => {
+		const cases = [
+			"PREMISE: FORALL(x, y);",
+			"PREMISE: EXISTS(a, b);",
+			"PREMISE: FORALL(z, t);",
+		];
+		const expecteds = [
+			{ type: TokenType.FORALL, name: "x", value: "y" },
+			{ type: TokenType.EXISTS, name: "a", value: "b" },
+			{ type: TokenType.FORALL, name: "z", value: "t" },
+		];
+		cases.forEach((input, idx) => {
+			const lexer = new Lexer(input);
+			const parser = new Parser(lexer);
+			expect(parser.error.length).toBe(0);
+			const ast = parser.parseProgram();
+			expect(ast.predicates.length).toBe(1);
+
+			const quant = ast.predicates[0] as LogicalOperators | Quantifier;
+
+			expect(quant.token.Type).toBe(expecteds[idx].type);
+			expect(quant.name?.TokenLiteral()).toBe(expecteds[idx].name);
+			expect(quant.value?.TokenLiteral()).toBe(expecteds[idx].value);
+		});
+	});
+
 	it("Should Parse Is Statement", () => {
 		const input = `PREMISE: IS(dog, animal);
 PREMISE: IS(cat,animal);
@@ -29,11 +55,11 @@ PREMISE: IS(fish,animal);`;
 
 			expect(logical.token.Type).toBe(TokenType.IS);
 			expect(logical.name?.TokenLiteral()).toBe(expected[i].name);
-			expect(logical.value?.length).toBe(1);
+			expect(logical.value).toBeDefined();
 
 			const value = logical.value as NonNullable<typeof logical.value>;
 
-			expect(value[0].TokenLiteral()).toBe(expected[i].value);
+			expect(value.TokenLiteral()).toBe(expected[i].value);
 		});
 	});
 
