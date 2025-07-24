@@ -2,9 +2,9 @@ import type { Lexer } from "../lexer/lexer";
 import { TokenType, type Token } from "../types/token";
 import {
 	Identifier,
-	LogicalOperators,
+	LogicalStatement,
 	Program,
-	Quantifier,
+	QuantifierStatement,
 	type Statement,
 } from "./ast";
 
@@ -78,8 +78,10 @@ export class Parser {
 		return ast;
 	}
 
-	private parseQuantifierExpression(token: Token): Quantifier | undefined {
-		const exprs = new Quantifier(token);
+	private parseQuantifierExpression(
+		token: Token,
+	): QuantifierStatement | undefined {
+		const exprs = new QuantifierStatement(token);
 		if (!this.peekCheck(TokenType.LPAREN)) {
 			return undefined;
 		}
@@ -142,8 +144,8 @@ export class Parser {
 		return exprs;
 	}
 
-	private parseLogicalExpression(token: Token): LogicalOperators | undefined {
-		const exprs = new LogicalOperators(token);
+	private parseLogicalExpression(token: Token): LogicalStatement | undefined {
+		const exprs = new LogicalStatement(token);
 		if (!this.peekCheck(TokenType.LPAREN)) {
 			return undefined;
 		}

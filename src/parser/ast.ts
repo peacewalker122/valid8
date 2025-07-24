@@ -1,7 +1,8 @@
-import { Token, TokenType } from "../types/token";
+import type { Token, TokenType } from "../types/token";
 
 abstract class Vertex {
 	abstract TokenLiteral(): string;
+	abstract string(): string;
 }
 
 abstract class Statement extends Vertex {
@@ -13,6 +14,9 @@ abstract class Argument extends Vertex {
 }
 
 class Program extends Vertex {
+	string(): string {
+		return this.predicates.map((p) => p.string()).join("\n");
+	}
 	public predicates: Statement[] = [];
 
 	TokenLiteral(): string {
@@ -24,7 +28,10 @@ class Program extends Vertex {
 	}
 }
 
-class LogicalOperators extends Statement {
+class LogicalStatement extends Statement {
+	string(): string {
+		return `${this.name?.TokenLiteral() || ""} ${this.value?.string() || ""}`;
+	}
 	public name: Identifier | undefined;
 	public value: Argument | undefined; // WARN: could contain other function as well but should can be ignored in this case.
 
@@ -41,7 +48,10 @@ class LogicalOperators extends Statement {
 	}
 }
 
-class Quantifier extends Statement {
+class QuantifierStatement extends Statement {
+	string(): string {
+		return `${this.token.Literal} ${this.name?.TokenLiteral()} ${this.value?.TokenLiteral()}`;
+	}
 	public name: Identifier | undefined;
 	public value: Argument | undefined; // WARN: could contain other function as well but should can be ignored in this case.
 
@@ -58,6 +68,9 @@ class Quantifier extends Statement {
 }
 
 class Identifier extends Argument {
+	string(): string {
+		return this.value;
+	}
 	constructor(
 		private token: TokenType,
 		private value: string,
@@ -79,7 +92,7 @@ export {
 	Statement,
 	Argument,
 	Program,
-	LogicalOperators,
+	LogicalStatement,
 	Identifier,
-	Quantifier,
+	QuantifierStatement,
 };

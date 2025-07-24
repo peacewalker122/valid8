@@ -1,6 +1,6 @@
 import { Lexer } from "../lexer/lexer";
 import { TokenType } from "../types/token";
-import type { LogicalOperators, Quantifier } from "./ast";
+import type { LogicalStatement, QuantifierStatement } from "./ast";
 import { Parser } from "./parser";
 
 describe("Parser", () => {
@@ -22,7 +22,7 @@ describe("Parser", () => {
 			const ast = parser.parseProgram();
 			expect(ast.predicates.length).toBe(1);
 
-			const quant = ast.predicates[0] as LogicalOperators | Quantifier;
+			const quant = ast.predicates[0] as LogicalStatement | QuantifierStatement;
 
 			expect(quant.token.Type).toBe(expecteds[idx].type);
 			expect(quant.name?.TokenLiteral()).toBe(expecteds[idx].name);
@@ -51,7 +51,7 @@ PREMISE: IS(fish,animal);`;
 			{ name: "fish", value: "animal" },
 		];
 		ast.predicates.forEach((e, i) => {
-			const logical = e as LogicalOperators;
+			const logical = e as LogicalStatement;
 
 			expect(logical.token.Type).toBe(TokenType.IS);
 			expect(logical.name?.TokenLiteral()).toBe(expected[i].name);
@@ -77,5 +77,16 @@ PREMISE: IS(fish, animal);`;
 		});
 		expect(errors.length).toBeGreaterThan(0);
 		console.log("Errors:", errors);
+	});
+
+	it("should return correct debug string from string() method", () => {
+		const input = "PREMISE: IS(dog, animal);";
+		const lexer = new Lexer(input);
+		const parser = new Parser(lexer);
+		expect(parser.error.length).toBe(0);
+
+		const ast = parser.parseProgram();
+		// The string() method should return "dog animal"
+		expect(ast.string()).toBe("dog animal");
 	});
 });
