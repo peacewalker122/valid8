@@ -78,10 +78,7 @@ export class Parser {
 			let statement: Statement | undefined;
 			const tokengroup = this.TokenComponents[this.curToken.Type]; // skip if the type if punctuation or keyword like "PREMISE", "CONCLUSION", etc.
 
-			if (
-				tokengroup === TokenGroup.PUNCTUATION ||
-				tokengroup === TokenGroup.LABEL
-			) {
+			if (tokengroup === TokenGroup.PUNCTUATION) {
 				this.nextToken();
 				continue; // skip punctuation and labels
 			}
