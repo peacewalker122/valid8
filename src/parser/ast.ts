@@ -1,4 +1,5 @@
 import type { Token, TokenType } from "../types/token";
+import { Expression } from "../types/type";
 
 abstract class Vertex {
 	abstract TokenLiteral(): string;
@@ -28,6 +29,7 @@ class Program extends Vertex {
 	}
 }
 
+// LogicalStatement is used for statements like "IS", "LIKES", etc.
 class LogicalStatement extends Statement {
 	string(): string {
 		return `${this.name?.TokenLiteral() || ""} ${this.value?.string() || ""}`;
@@ -48,6 +50,7 @@ class LogicalStatement extends Statement {
 	}
 }
 
+// QuantifierStatement is used for statements like "FORALL", "EXISTS", etc.
 class QuantifierStatement extends Statement {
 	string(): string {
 		return `${this.token.Literal} ${this.name?.TokenLiteral()} ${this.value?.TokenLiteral()}`;
@@ -63,7 +66,28 @@ class QuantifierStatement extends Statement {
 		throw new Error("Method not implemented.");
 	}
 	TokenLiteral(): string {
-		throw new Error("Method not implemented.");
+		return this.token.Literal ?? this.token.Type; // return the literal value of the token, if available, otherwise the token type
+	}
+}
+
+class ExpressionStatement extends Statement {
+	public expression: Statement | undefined;
+
+	constructor(public token: Token) {
+		super();
+	}
+
+	statementNode(): void {
+		// This method is intentionally left empty.
+	}
+	TokenLiteral(): string {
+		return this.token.Literal ?? this.token.Type; // return the literal value of the token, if available, otherwise the token type
+	}
+	string(): string {
+		if (this.expression) {
+			return this.expression.toString();
+		}
+		return "";
 	}
 }
 
@@ -95,4 +119,5 @@ export {
 	LogicalStatement,
 	Identifier,
 	QuantifierStatement,
+	ExpressionStatement,
 };

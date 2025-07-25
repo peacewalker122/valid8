@@ -1,6 +1,12 @@
 import type { Lexer } from "../lexer/lexer";
 import { TokenType, type Token } from "../types/token";
 import {
+	Expression,
+	type infixParsefn,
+	type prefixParsefn,
+} from "../types/type";
+import {
+	ExpressionStatement,
 	Identifier,
 	LogicalStatement,
 	Program,
@@ -11,6 +17,8 @@ import {
 enum TokenGroup {
 	LOGICAL,
 	QUANTIFIER,
+	PUNCTUATION,
+	LABEL,
 }
 
 export class Parser {
@@ -18,6 +26,9 @@ export class Parser {
 	private curToken: Token;
 	private peekToken: Token;
 	public error: string[];
+
+	private prefixParseFns: Map<TokenType, prefixParsefn> = new Map();
+	private infixParseFns: Map<TokenType, infixParsefn> = new Map();
 
 	private TokenComponents: Record<string, TokenGroup> = {
 		ALL: TokenGroup.LOGICAL,
@@ -29,6 +40,17 @@ export class Parser {
 
 		EXISTS: TokenGroup.QUANTIFIER,
 		FORALL: TokenGroup.QUANTIFIER,
+
+		// punctuation
+		LPAREN: TokenGroup.PUNCTUATION,
+		RPAREN: TokenGroup.PUNCTUATION,
+		COMMA: TokenGroup.PUNCTUATION,
+		SEMICOLON: TokenGroup.PUNCTUATION,
+		COLON: TokenGroup.PUNCTUATION,
+
+		// labels
+		PREMISE: TokenGroup.LABEL,
+		CONCLUSION: TokenGroup.LABEL,
 	};
 
 	constructor(lexer: Lexer) {
@@ -54,8 +76,17 @@ export class Parser {
 
 		while (this.curToken.Type !== TokenType.EOF) {
 			let statement: Statement | undefined;
+			const tokengroup = this.TokenComponents[this.curToken.Type]; // skip if the type if punctuation or keyword like "PREMISE", "CONCLUSION", etc.
 
-			switch (this.TokenComponents[this.curToken.Type]) {
+			if (
+				tokengroup === TokenGroup.PUNCTUATION ||
+				tokengroup === TokenGroup.LABEL
+			) {
+				this.nextToken();
+				continue; // skip punctuation and labels
+			}
+
+			switch (tokengroup) {
 				case TokenGroup.LOGICAL: {
 					statement = this.parseLogicalExpression(this.curToken);
 					break;
@@ -64,8 +95,9 @@ export class Parser {
 					statement = this.parseQuantifierExpression(this.curToken);
 					break;
 				}
-				// default:
-				// 	console.error("not yet implemented");
+				default: {
+					statement = this.ParseExpressionStatement();
+				}
 			}
 
 			if (statement !== undefined) {
@@ -76,6 +108,18 @@ export class Parser {
 		}
 
 		return ast;
+	}
+
+	private ParseExpressionStatement(): ExpressionStatement | undefined {
+		const expr = new ExpressionStatement(this.curToken);
+
+		expr.expression = this.parseExpression(Expression.LOWEST);
+
+		if (this.peekToken.Type === TokenType.SEMICOLON) {
+			this.nextToken(); // consume the semicolon
+		}
+
+		return expr;
 	}
 
 	private parseQuantifierExpression(
@@ -222,5 +266,27 @@ export class Parser {
 
 	private curTokenIs(expectedType: TokenType): boolean {
 		return this.curToken.Type === expectedType;
+	}
+
+	private parseExpression(
+		precedence: Expression,
+	): ExpressionStatement | undefined {
+		const prefix = this.prefixParseFns.get(this.curToken.Type);
+
+		if (prefix === undefined) {
+			return undefined;
+		}
+
+		const leftExp = prefix();
+
+		return leftExp;
+	}
+
+	private registerPrefix(token: TokenType, fn: prefixParsefn): void {
+		this.prefixParseFns.set(token, fn);
+	}
+
+	private registerInfix(fn: infixParsefn, token: TokenType): void {
+		this.infixParseFns.set(token, fn);
 	}
 }
