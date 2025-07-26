@@ -1,4 +1,4 @@
-import { ExpressionStatement } from "../parser/ast";
+import type { Statement } from "../parser/ast";
 
 export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
@@ -7,5 +7,5 @@ export enum Expression {
 	CALL,
 }
 
-export type prefixParsefn = () => ExpressionStatement;
-export type infixParsefn = (left: ExpressionStatement) => ExpressionStatement;
+export type prefixParsefn = () => Statement | undefined;
+export type infixParsefn = (left: Statement) => Statement | undefined;

@@ -10,9 +10,10 @@ abstract class Statement extends Vertex {
 	abstract statementNode(): void;
 }
 
-abstract class Argument extends Vertex {
-	abstract argumentNode(): void;
-}
+// expression
+// abstract class Argument extends Vertex {
+// 	abstract argumentNode(): void;
+// }
 
 class Program extends Vertex {
 	string(): string {
@@ -30,12 +31,12 @@ class Program extends Vertex {
 }
 
 // LogicalStatement is used for statements like "IS", "LIKES", etc.
-class LogicalStatement extends Statement {
+class AtomicStatement extends Statement {
 	string(): string {
 		return `${this.name?.TokenLiteral() || ""} ${this.value?.string() || ""}`;
 	}
-	public name: Identifier | undefined;
-	public value: Argument | undefined; // WARN: could contain other function as well but should can be ignored in this case.
+	public name: IdentifierStatement | undefined;
+	public value: Statement | undefined; // WARN: could contain other function as well but should can be ignored in this case.
 
 	constructor(public token: Token) {
 		super();
@@ -55,8 +56,8 @@ class QuantifierStatement extends Statement {
 	string(): string {
 		return `${this.token.Literal} ${this.name?.TokenLiteral()} ${this.value?.TokenLiteral()}`;
 	}
-	public name: Identifier | undefined;
-	public value: Argument | undefined; // WARN: could contain other function as well but should can be ignored in this case.
+	public name: IdentifierStatement | undefined;
+	public value: Statement | undefined; // recursive structure, can be another Expression or AtomicStatement
 
 	constructor(public token: Token) {
 		super();
@@ -91,7 +92,49 @@ class ExpressionStatement extends Statement {
 	}
 }
 
-class Identifier extends Argument {
+class CompoundStatement extends Statement {
+	string(): string {
+		return `${this.left?.string() || ""} ${this.token.Literal} ${this.right?.string() || ""}`;
+	}
+	public left: Statement | undefined;
+	public right: Statement | undefined;
+
+	constructor(public token: Token) {
+		super();
+	}
+
+	statementNode(): void {
+		// This method is intentionally left empty.
+	}
+
+	TokenLiteral(): string {
+		return this.token.Literal ?? this.token.Type; // return the literal value of the token, if available, otherwise the token type
+	}
+}
+
+class NegationStatement extends Statement {
+	string(): string {
+		return `NOT ${this.value?.string() || ""}`;
+	}
+	public value: Statement | undefined;
+
+	constructor(public token: Token) {
+		super();
+	}
+
+	statementNode(): void {
+		// This method is intentionally left empty.
+	}
+
+	TokenLiteral(): string {
+		return this.token.Literal ?? this.token.Type; // return the literal value of the token, if available, otherwise the token type
+	}
+}
+
+class IdentifierStatement extends Statement {
+	statementNode(): void {
+		// This method is intentionally left empty.
+	}
 	string(): string {
 		return this.value;
 	}
@@ -102,22 +145,34 @@ class Identifier extends Argument {
 		super();
 	}
 
-	argumentNode(): void {
-		// This method is intentionally left empty.
-	}
-
 	TokenLiteral(): string {
 		return this.value;
+	}
+}
+
+class LabelStatement extends Statement {
+	statementNode(): void {}
+	TokenLiteral(): string {
+		return this.token.Literal ?? this.token.Type; // return the literal value of the token, if available, otherwise the token type
+	}
+	string(): string {
+		return this.token.Literal || this.token.Type;
+	}
+
+	constructor(private token: Token) {
+		super();
 	}
 }
 
 export {
 	Vertex,
 	Statement,
-	Argument,
 	Program,
-	LogicalStatement,
-	Identifier,
+	AtomicStatement,
+	IdentifierStatement,
 	QuantifierStatement,
 	ExpressionStatement,
+	CompoundStatement,
+	NegationStatement,
+	LabelStatement,
 };

@@ -12,6 +12,8 @@ export enum TokenType {
 	IS = "IS",
 	IMPLIES = "IMPLIES",
 	CAN = "CAN",
+	AND = "AND",
+	HAS = "HAS",
 
 	// Structural elements
 	LPAREN = "LPAREN",

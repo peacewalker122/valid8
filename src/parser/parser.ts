@@ -1,24 +1,30 @@
+import { log } from "../util/log";
 import type { Lexer } from "../lexer/lexer";
-import { TokenType, type Token } from "../types/token";
+import { type Token, TokenType } from "../types/token";
 import {
 	Expression,
 	type infixParsefn,
 	type prefixParsefn,
 } from "../types/type";
 import {
+	CompoundStatement,
 	ExpressionStatement,
-	Identifier,
-	LogicalStatement,
+	IdentifierStatement,
+	AtomicStatement,
+	NegationStatement,
 	Program,
 	QuantifierStatement,
 	type Statement,
+	LabelStatement,
 } from "./ast";
 
 enum TokenGroup {
-	LOGICAL,
+	ATOMIC,
 	QUANTIFIER,
 	PUNCTUATION,
 	LABEL,
+	COMPOUND,
+	NEGATION,
 }
 
 export class Parser {
@@ -31,12 +37,12 @@ export class Parser {
 	private infixParseFns: Map<TokenType, infixParsefn> = new Map();
 
 	private TokenComponents: Record<string, TokenGroup> = {
-		ALL: TokenGroup.LOGICAL,
-		SOME: TokenGroup.LOGICAL,
-		NO: TokenGroup.LOGICAL,
-		IS: TokenGroup.LOGICAL,
-		IMPLIES: TokenGroup.LOGICAL,
-		CAN: TokenGroup.LOGICAL,
+		IS: TokenGroup.ATOMIC,
+		HAS: TokenGroup.ATOMIC,
+		CAN: TokenGroup.ATOMIC,
+		ARE: TokenGroup.ATOMIC,
+
+		NOT: TokenGroup.NEGATION,
 
 		EXISTS: TokenGroup.QUANTIFIER,
 		FORALL: TokenGroup.QUANTIFIER,
@@ -50,15 +56,30 @@ export class Parser {
 
 		// labels
 		PREMISE: TokenGroup.LABEL,
-		CONCLUSION: TokenGroup.LABEL,
+		THEREFORE: TokenGroup.LABEL,
+
+		// COMPOUND
+		AND: TokenGroup.COMPOUND,
+		OR: TokenGroup.COMPOUND,
+		IMPLIES: TokenGroup.COMPOUND,
 	};
 
 	constructor(lexer: Lexer) {
 		this.lexer = lexer;
 		this.peekToken = this.lexer.GetNextToken();
-		this.curToken = this.peekToken;
 
+		this.curToken = this.peekToken;
 		this.peekToken = this.lexer.GetNextToken(); // lsp rewel
+
+		// TODO: add other registerPrefix functions as well
+		this.registerPrefix(TokenType.IDENTIFIER, (): Statement | undefined => {
+			log.debug("parseIdentifier called");
+			return this.parseIdentifier();
+		});
+		this.registerPrefix(TokenType.FORALL, (): Statement | undefined => {
+			log.debug("parseQuantifierExpression called");
+			return this.parseQuantifierStatement();
+		});
 
 		this.error = [];
 	}
@@ -67,6 +88,9 @@ export class Parser {
 	 * nextToken
 	 */
 	public nextToken() {
+		log.debug(
+			`nextToken called, current token: ${this.curToken.Type}, peek token: ${this.peekToken.Type}`,
+		);
 		this.curToken = this.peekToken;
 		this.peekToken = this.lexer.GetNextToken();
 	}
@@ -84,16 +108,35 @@ export class Parser {
 			}
 
 			switch (tokengroup) {
-				case TokenGroup.LOGICAL: {
-					statement = this.parseLogicalExpression(this.curToken);
+				case TokenGroup.LABEL: {
+					log.debug("ParseLabelStatement called");
+					statement = this.ParseLabelStatement();
+					break;
+				}
+				case TokenGroup.ATOMIC: {
+					log.debug("parseAtomicStatement called");
+					statement = this.parseAtomicStatement(this.curToken);
 					break;
 				}
 				case TokenGroup.QUANTIFIER: {
-					statement = this.parseQuantifierExpression(this.curToken);
+					log.debug("parseQuantifierStatement called");
+					statement = this.parseQuantifierStatement();
+					break;
+				}
+				case TokenGroup.NEGATION: {
+					log.debug("ParseNegationStatement called");
+					statement = this.ParseNegationStatement();
+					break;
+				}
+				case TokenGroup.COMPOUND: {
+					log.debug("ParseCompoundStatement called");
+					statement = this.ParseCompoundStatement();
 					break;
 				}
 				default: {
+					log.debug("ParseExpressionStatement called");
 					statement = this.ParseExpressionStatement();
+					break;
 				}
 			}
 
@@ -105,6 +148,124 @@ export class Parser {
 		}
 
 		return ast;
+	}
+
+	private parseIdentifier(): IdentifierStatement | undefined {
+		if (!this.curTokenIs(TokenType.IDENTIFIER)) {
+			this.error.push(`Expected IDENTIFIER but got ${this.curToken.Type}`);
+			return undefined;
+		}
+
+		const ident = new IdentifierStatement(
+			this.curToken.Type,
+			this.curToken.Literal ?? "",
+		);
+		this.nextToken(); // consume the identifier token
+
+		console.debug(`Parsed identifier: ${ident.TokenLiteral()}`);
+		return ident;
+	}
+
+	private ParseCompoundStatement(): CompoundStatement | undefined {
+		const compound = new CompoundStatement(this.curToken);
+		if (!this.peekCheck(TokenType.LPAREN)) {
+			this.error.push(
+				`Expected LPAREN after ${this.curToken.Type}, got ${this.peekToken.Type}`,
+			);
+			return undefined;
+		}
+		this.nextToken(); // current-token = (
+
+		if (!this.expectPeek(TokenType.IDENTIFIER)) {
+			this.error.push(
+				`Expected IDENTIFIER after LPAREN, got ${this.peekToken.Type}`,
+			);
+			return undefined;
+		}
+		this.nextToken(); // current-token
+
+		compound.left = this.parseExpression(Expression.LOWEST);
+
+		if (!this.expectPeek(TokenType.COMMA)) {
+			this.error.push(
+				`Expected COMMA after IDENTIFIER, got ${this.peekToken.Type}`,
+			);
+			return undefined;
+		}
+		this.nextToken(); // current-token = COMMA
+
+		if (!this.expectPeek(TokenType.IDENTIFIER)) {
+			this.error.push(
+				`Expected IDENTIFIER after COMMA, got ${this.peekToken.Type}`,
+			);
+			return undefined;
+		}
+		this.nextToken(); // current-token
+
+		compound.right = this.parseExpression(Expression.LOWEST);
+
+		// check if they're going to EOF and still not found the RPAREN
+		let foundRPAREN = false;
+		while (
+			!this.curTokenIs(TokenType.RPAREN) &&
+			!this.curTokenIs(TokenType.SEMICOLON) // mean we are at the end of the statement
+		) {
+			this.nextToken();
+
+			if (this.curTokenIs(TokenType.RPAREN)) {
+				foundRPAREN = true;
+				break;
+			}
+		}
+		if (!foundRPAREN) {
+			this.error.push(`Expected RPAREN but got ${this.curToken.Type}`);
+			return undefined;
+		}
+
+		return compound;
+	}
+
+	private ParseNegationStatement(): NegationStatement | undefined {
+		const negation = new NegationStatement(this.curToken);
+
+		if (!this.peekCheck(TokenType.LPAREN)) {
+			this.error.push(`Expected LPAREN after NOT, got ${this.peekToken.Type}`);
+			return undefined;
+		}
+
+		this.nextToken(); // current-token = (
+		if (!this.expectPeek(TokenType.IDENTIFIER)) {
+			this.error.push(
+				`Expected IDENTIFIER after LPAREN, got ${this.peekToken.Type}`,
+			);
+			return undefined;
+		}
+		this.nextToken(); // current-token = Identifier
+
+		negation.value = new IdentifierStatement(
+			this.curToken.Type,
+			this.curToken.Literal ?? "",
+		);
+
+		// check if they're going to EOF and still not found the RPAREN
+		let foundRPAREN = false;
+		while (
+			!this.curTokenIs(TokenType.RPAREN) &&
+			!this.curTokenIs(TokenType.SEMICOLON) // mean we are at the end of the statement
+		) {
+			this.nextToken();
+
+			if (this.curTokenIs(TokenType.RPAREN)) {
+				foundRPAREN = true;
+				break;
+			}
+		}
+		if (!foundRPAREN) {
+			this.error.push(`Expected RPAREN but got ${this.curToken.Type}`);
+			return undefined;
+		}
+
+		return negation;
 	}
 
 	private ParseExpressionStatement(): ExpressionStatement | undefined {
@@ -119,10 +280,22 @@ export class Parser {
 		return expr;
 	}
 
-	private parseQuantifierExpression(
-		token: Token,
-	): QuantifierStatement | undefined {
-		const exprs = new QuantifierStatement(token);
+	private ParseLabelStatement(): LabelStatement | undefined {
+		const label = new LabelStatement(this.curToken);
+		if (!this.peekCheck(TokenType.COLON)) {
+			this.error.push(
+				`Expected COLON after ${this.curToken.Type}, got ${this.peekToken.Type}`,
+			);
+			return undefined;
+		}
+
+		this.nextToken(); // current-token = COLON
+
+		return label;
+	}
+
+	private parseQuantifierStatement(): QuantifierStatement | undefined {
+		const exprs = new QuantifierStatement(this.curToken);
 		if (!this.peekCheck(TokenType.LPAREN)) {
 			return undefined;
 		}
@@ -137,7 +310,7 @@ export class Parser {
 		}
 		this.nextToken(); // current-token = IDENTIFIER
 
-		exprs.name = new Identifier(
+		exprs.name = new IdentifierStatement(
 			this.curToken.Type,
 			this.curToken.Literal ?? "",
 		);
@@ -158,35 +331,32 @@ export class Parser {
 		}
 		this.nextToken(); // current-token = IDENTIFIER
 
-		exprs.value = new Identifier(
-			this.curToken.Type,
-			this.curToken.Literal ?? "",
-		);
+		exprs.value = this.parseExpression(Expression.LOWEST); // NOTE: when this parsing something, the exprs return undefined...
 
 		// check if they're going to EOF and still not found the RPAREN
-		let foundRPAREN = false;
-		while (
-			!this.curTokenIs(TokenType.RPAREN) &&
-			!this.curTokenIs(TokenType.SEMICOLON) // mean we are at the end of the statement
-		) {
-			this.nextToken();
+		// let foundRPAREN = false;
+		// while (
+		// 	!this.curTokenIs(TokenType.RPAREN) &&
+		// 	!this.curTokenIs(TokenType.SEMICOLON) // mean we are at the end of the statement
+		// ) {
+		// 	this.nextToken();
 
-			if (this.curTokenIs(TokenType.RPAREN)) {
-				foundRPAREN = true;
-				break;
-			}
-		}
-
-		if (!foundRPAREN) {
-			this.error.push(`Expected RPAREN but got ${this.curToken.Type}`);
-			return undefined;
-		}
+		// 	if (this.curTokenIs(TokenType.RPAREN)) {
+		// 		foundRPAREN = true;
+		// 		break;
+		// 	}
+		// }
+		// if (!foundRPAREN) {
+		// 	console.error(`Expected RPAREN but got ${this.curToken.Type}`);
+		// 	this.error.push(`Expected RPAREN but got ${this.curToken.Type}`);
+		// 	return undefined;
+		// }
 
 		return exprs;
 	}
 
-	private parseLogicalExpression(token: Token): LogicalStatement | undefined {
-		const exprs = new LogicalStatement(token);
+	private parseAtomicStatement(token: Token): AtomicStatement | undefined {
+		const exprs = new AtomicStatement(token);
 		if (!this.peekCheck(TokenType.LPAREN)) {
 			return undefined;
 		}
@@ -201,7 +371,7 @@ export class Parser {
 		}
 		this.nextToken(); // current-token = IDENTIFIER
 
-		exprs.name = new Identifier(
+		exprs.name = new IdentifierStatement(
 			this.curToken.Type,
 			this.curToken.Literal ?? "",
 		);
@@ -222,7 +392,7 @@ export class Parser {
 		}
 		this.nextToken(); // current-token = IDENTIFIER
 
-		exprs.value = new Identifier(
+		exprs.value = new IdentifierStatement(
 			this.curToken.Type,
 			this.curToken.Literal ?? "",
 		);
@@ -240,7 +410,6 @@ export class Parser {
 				break;
 			}
 		}
-
 		if (!foundRPAREN) {
 			this.error.push(`Expected RPAREN but got ${this.curToken.Type}`);
 			return undefined;
@@ -265,9 +434,7 @@ export class Parser {
 		return this.curToken.Type === expectedType;
 	}
 
-	private parseExpression(
-		precedence: Expression,
-	): ExpressionStatement | undefined {
+	private parseExpression(_precedence: Expression): Statement | undefined {
 		const prefix = this.prefixParseFns.get(this.curToken.Type);
 
 		if (prefix === undefined) {
@@ -283,7 +450,7 @@ export class Parser {
 		this.prefixParseFns.set(token, fn);
 	}
 
-	private registerInfix(fn: infixParsefn, token: TokenType): void {
-		this.infixParseFns.set(token, fn);
-	}
+	// private registerInfix(fn: infixParsefn, token: TokenType): void {
+	// 	this.infixParseFns.set(token, fn);
+	// }
 }

@@ -29,6 +29,8 @@ export class Lexer {
 		CAN: TokenType.CAN,
 		EXISTS: TokenType.EXISTS,
 		FORALL: TokenType.FORALL,
+		AND: TokenType.AND,
+		HAS: TokenType.HAS,
 	};
 	private symbols: Record<string, TokenType> = {
 		"(": TokenType.LPAREN,
@@ -101,6 +103,7 @@ export class Lexer {
 
 	// HELPER ====================
 	private peekNextWord(): string {
+		this.skipWhitespace();
 		const lastPos = this.position;
 		let wordPos = this.position;
 		let ch = this.ch;
