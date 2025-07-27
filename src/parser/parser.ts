@@ -67,18 +67,20 @@ export class Parser {
 	constructor(lexer: Lexer) {
 		this.lexer = lexer;
 		this.peekToken = this.lexer.GetNextToken();
-
 		this.curToken = this.peekToken;
+
 		this.peekToken = this.lexer.GetNextToken(); // lsp rewel
 
 		// TODO: add other registerPrefix functions as well
 		this.registerPrefix(TokenType.IDENTIFIER, (): Statement | undefined => {
-			log.debug("parseIdentifier called");
 			return this.parseIdentifier();
 		});
 		this.registerPrefix(TokenType.FORALL, (): Statement | undefined => {
-			log.debug("parseQuantifierExpression called");
 			return this.parseQuantifierStatement();
+		});
+		this.registerPrefix(TokenType.IS, (): Statement | undefined => {
+			log.debug("parseAtomicStatement called for IS");
+			return this.parseAtomicStatement(this.curToken);
 		});
 
 		this.error = [];
@@ -88,11 +90,11 @@ export class Parser {
 	 * nextToken
 	 */
 	public nextToken() {
+		this.curToken = this.peekToken;
+		this.peekToken = this.lexer.GetNextToken();
 		log.debug(
 			`nextToken called, current token: ${this.curToken.Type}, peek token: ${this.peekToken.Type}`,
 		);
-		this.curToken = this.peekToken;
-		this.peekToken = this.lexer.GetNextToken();
 	}
 
 	public parseProgram(): Program {
@@ -152,7 +154,7 @@ export class Parser {
 
 	private parseIdentifier(): IdentifierStatement | undefined {
 		if (!this.curTokenIs(TokenType.IDENTIFIER)) {
-			this.error.push(`Expected IDENTIFIER but got ${this.curToken.Type}`);
+			this.addError(`Expected IDENTIFIER but got ${this.curToken.Type}`);
 			return undefined;
 		}
 
@@ -162,6 +164,10 @@ export class Parser {
 		);
 		this.nextToken(); // consume the identifier token
 
+		if (this.expectPeek(TokenType.RPAREN)) {
+			this.nextToken(); // consume the RPAREN token
+		}
+
 		console.debug(`Parsed identifier: ${ident.TokenLiteral()}`);
 		return ident;
 	}
@@ -169,7 +175,7 @@ export class Parser {
 	private ParseCompoundStatement(): CompoundStatement | undefined {
 		const compound = new CompoundStatement(this.curToken);
 		if (!this.peekCheck(TokenType.LPAREN)) {
-			this.error.push(
+			this.addError(
 				`Expected LPAREN after ${this.curToken.Type}, got ${this.peekToken.Type}`,
 			);
 			return undefined;
@@ -177,7 +183,7 @@ export class Parser {
 		this.nextToken(); // current-token = (
 
 		if (!this.expectPeek(TokenType.IDENTIFIER)) {
-			this.error.push(
+			this.addError(
 				`Expected IDENTIFIER after LPAREN, got ${this.peekToken.Type}`,
 			);
 			return undefined;
@@ -187,7 +193,7 @@ export class Parser {
 		compound.left = this.parseExpression(Expression.LOWEST);
 
 		if (!this.expectPeek(TokenType.COMMA)) {
-			this.error.push(
+			this.addError(
 				`Expected COMMA after IDENTIFIER, got ${this.peekToken.Type}`,
 			);
 			return undefined;
@@ -195,7 +201,7 @@ export class Parser {
 		this.nextToken(); // current-token = COMMA
 
 		if (!this.expectPeek(TokenType.IDENTIFIER)) {
-			this.error.push(
+			this.addError(
 				`Expected IDENTIFIER after COMMA, got ${this.peekToken.Type}`,
 			);
 			return undefined;
@@ -218,7 +224,7 @@ export class Parser {
 			}
 		}
 		if (!foundRPAREN) {
-			this.error.push(`Expected RPAREN but got ${this.curToken.Type}`);
+			this.addError(`Expected RPAREN but got ${this.curToken.Type}`);
 			return undefined;
 		}
 
@@ -229,13 +235,13 @@ export class Parser {
 		const negation = new NegationStatement(this.curToken);
 
 		if (!this.peekCheck(TokenType.LPAREN)) {
-			this.error.push(`Expected LPAREN after NOT, got ${this.peekToken.Type}`);
+			this.addError(`Expected LPAREN after NOT, got ${this.peekToken.Type}`);
 			return undefined;
 		}
-
 		this.nextToken(); // current-token = (
+
 		if (!this.expectPeek(TokenType.IDENTIFIER)) {
-			this.error.push(
+			this.addError(
 				`Expected IDENTIFIER after LPAREN, got ${this.peekToken.Type}`,
 			);
 			return undefined;
@@ -261,7 +267,7 @@ export class Parser {
 			}
 		}
 		if (!foundRPAREN) {
-			this.error.push(`Expected RPAREN but got ${this.curToken.Type}`);
+			this.addError(`Expected RPAREN but got ${this.curToken.Type}`);
 			return undefined;
 		}
 
@@ -283,14 +289,13 @@ export class Parser {
 	private ParseLabelStatement(): LabelStatement | undefined {
 		const label = new LabelStatement(this.curToken);
 		if (!this.peekCheck(TokenType.COLON)) {
-			this.error.push(
+			this.addError(
 				`Expected COLON after ${this.curToken.Type}, got ${this.peekToken.Type}`,
 			);
 			return undefined;
 		}
 
 		this.nextToken(); // current-token = COLON
-
 		return label;
 	}
 
@@ -302,10 +307,7 @@ export class Parser {
 
 		this.nextToken(); // current-token = (
 
-		if (!this.expectPeek(TokenType.IDENTIFIER)) {
-			this.error.push(
-				`Expected IDENTIFIER after LPAREN, got ${this.peekToken.Type}`,
-			);
+		if (!this.peekCheck(TokenType.IDENTIFIER)) {
 			return undefined;
 		}
 		this.nextToken(); // current-token = IDENTIFIER
@@ -315,23 +317,63 @@ export class Parser {
 			this.curToken.Literal ?? "",
 		);
 
-		if (!this.expectPeek(TokenType.COMMA)) {
-			this.error.push(
-				`Expected COMMA after IDENTIFIER, got ${this.peekToken.Type}`,
-			);
+		if (!this.peekCheck(TokenType.COMMA)) {
 			return undefined;
 		}
 		this.nextToken(); // current-token = COMMA
 
-		if (!this.expectPeek(TokenType.IDENTIFIER)) {
-			this.error.push(
-				`Expected IDENTIFIER after COMMA, got ${this.peekToken.Type}`,
-			);
+		// if (!this.peekCheck(TokenType.IDENTIFIER)) {
+		// 	return undefined;
+		// }
+		this.nextToken(); // current-token = IDENTIFIER
+
+		exprs.value = this.parseExpression(Expression.LOWEST);
+		log.debug(
+			`Parsed quantifier: ${exprs.name?.TokenLiteral()} with value: ${exprs.value?.TokenLiteral()}`,
+		);
+
+		return exprs;
+	}
+
+	private parseAtomicStatement(token: Token): AtomicStatement | undefined {
+		const exprs = new AtomicStatement(token);
+		if (!this.peekCheck(TokenType.LPAREN)) {
+			this.addError(`Expected LPAREN after ${this.peekToken.Type}`);
+			return undefined;
+		}
+
+		this.nextToken(); // current-token = (
+
+		if (!this.peekCheck(TokenType.IDENTIFIER)) {
 			return undefined;
 		}
 		this.nextToken(); // current-token = IDENTIFIER
 
-		exprs.value = this.parseExpression(Expression.LOWEST); // NOTE: when this parsing something, the exprs return undefined...
+		exprs.name = new IdentifierStatement(
+			this.curToken.Type,
+			this.curToken.Literal ?? "",
+		);
+
+		if (!this.peekCheck(TokenType.COMMA)) {
+			return undefined;
+		}
+		this.nextToken(); // current-token = COMMA
+
+		// NOTE: could be anything as long they're an valid token, except punctuation
+		// if (!this.peekCheck(TokenType.IDENTIFIER)) {
+		// 	return undefined;
+		// }
+		// this.nextToken(); // current-token = IDENTIFIER
+
+		// exprs.value = new IdentifierStatement(
+		// 	this.curToken.Type,
+		// 	this.curToken.Literal ?? "",
+		// );
+		this.nextToken();
+
+		exprs.value = this.parseExpression(Expression.LOWEST);
+		log.debug("Parsed atomic statement:", exprs.value);
+		this.nextToken(); // consume the value token
 
 		// check if they're going to EOF and still not found the RPAREN
 		// let foundRPAREN = false;
@@ -347,73 +389,9 @@ export class Parser {
 		// 	}
 		// }
 		// if (!foundRPAREN) {
-		// 	console.error(`Expected RPAREN but got ${this.curToken.Type}`);
-		// 	this.error.push(`Expected RPAREN but got ${this.curToken.Type}`);
+		// 	this.addError(`Expected RPAREN but got ${this.curToken.Type}`);
 		// 	return undefined;
 		// }
-
-		return exprs;
-	}
-
-	private parseAtomicStatement(token: Token): AtomicStatement | undefined {
-		const exprs = new AtomicStatement(token);
-		if (!this.peekCheck(TokenType.LPAREN)) {
-			return undefined;
-		}
-
-		this.nextToken(); // current-token = (
-
-		if (!this.expectPeek(TokenType.IDENTIFIER)) {
-			this.error.push(
-				`Expected IDENTIFIER after LPAREN, got ${this.peekToken.Type}`,
-			);
-			return undefined;
-		}
-		this.nextToken(); // current-token = IDENTIFIER
-
-		exprs.name = new IdentifierStatement(
-			this.curToken.Type,
-			this.curToken.Literal ?? "",
-		);
-
-		if (!this.expectPeek(TokenType.COMMA)) {
-			this.error.push(
-				`Expected COMMA after IDENTIFIER, got ${this.peekToken.Type}`,
-			);
-			return undefined;
-		}
-		this.nextToken(); // current-token = COMMA
-
-		if (!this.expectPeek(TokenType.IDENTIFIER)) {
-			this.error.push(
-				`Expected IDENTIFIER after COMMA, got ${this.peekToken.Type}`,
-			);
-			return undefined;
-		}
-		this.nextToken(); // current-token = IDENTIFIER
-
-		exprs.value = new IdentifierStatement(
-			this.curToken.Type,
-			this.curToken.Literal ?? "",
-		);
-
-		// check if they're going to EOF and still not found the RPAREN
-		let foundRPAREN = false;
-		while (
-			!this.curTokenIs(TokenType.RPAREN) &&
-			!this.curTokenIs(TokenType.SEMICOLON) // mean we are at the end of the statement
-		) {
-			this.nextToken();
-
-			if (this.curTokenIs(TokenType.RPAREN)) {
-				foundRPAREN = true;
-				break;
-			}
-		}
-		if (!foundRPAREN) {
-			this.error.push(`Expected RPAREN but got ${this.curToken.Type}`);
-			return undefined;
-		}
 
 		return exprs;
 	}
@@ -422,7 +400,7 @@ export class Parser {
 		if (this.peekToken.Type === expectedType) {
 			return true;
 		}
-		this.error.push(`Expected ${expectedType} but got ${this.peekToken.Type}`);
+		this.addError(`Expected ${expectedType} but got ${this.peekToken.Type}`);
 		return false;
 	}
 
@@ -438,6 +416,9 @@ export class Parser {
 		const prefix = this.prefixParseFns.get(this.curToken.Type);
 
 		if (prefix === undefined) {
+			console.warn(
+				`No prefix parse function registered for token: ${this.curToken.Type}`,
+			);
 			return undefined;
 		}
 
@@ -453,4 +434,9 @@ export class Parser {
 	// private registerInfix(fn: infixParsefn, token: TokenType): void {
 	// 	this.infixParseFns.set(token, fn);
 	// }
+
+	private addError(msg: string): void {
+		this.error.push(msg);
+		console.error(msg);
+	}
 }
