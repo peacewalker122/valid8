@@ -1,10 +1,11 @@
 import { Lexer } from "../lexer/lexer";
 import { TokenType } from "../types/token";
-import { log } from "../util/log";
-import {
+import type {
 	ExpressionStatement,
 	AtomicStatement,
 	QuantifierStatement,
+	IdentifierStatement,
+	CompoundStatement,
 } from "./ast";
 import { Parser } from "./parser";
 
@@ -147,6 +148,43 @@ PREMISE: IS(fish, animal);`;
 		const quantifier = ast.predicates[1] as QuantifierStatement;
 		expect(quantifier.token.Type).toBe(TokenType.FORALL);
 		expect(quantifier.name?.TokenLiteral()).toBe(expected_token[1].name);
-		expect(quantifier.value?.TokenLiteral()).toBe(expected_token[1].value);
+
+		// check what inside that quantifier
+		const logicalStatement = quantifier.value as AtomicStatement;
+		expect(logicalStatement.token.Type).toBe(TokenType.IS);
+		expect(logicalStatement.name?.TokenLiteral()).toBe(expected_token[2].name);
+		expect(logicalStatement.value?.TokenLiteral()).toBe(
+			expected_token[2].value,
+		);
+	});
+
+	it("should parse complex logical expressions", () => {
+		const input = `PREMISE: FORALL(x, AND(IS(x, cat), IS(x, black)));`;
+		const lexer = new Lexer(input);
+		const parser = new Parser(lexer);
+		expect(parser.error.length).toBe(0);
+
+		const ast = parser.parseProgram();
+
+		const first_token = ast.predicates[0] as ExpressionStatement;
+		expect(first_token.token.Type).toBe(TokenType.PREMISE);
+
+		const quantifier = ast.predicates[1] as QuantifierStatement;
+		expect(quantifier.token.Type).toBe(TokenType.FORALL);
+		expect(quantifier.name?.TokenLiteral()).toBe("x");
+
+		const logicalStatement = quantifier.value as CompoundStatement;
+		expect(logicalStatement.token.Type).toBe(TokenType.AND);
+
+		const firstCondition = logicalStatement.left as AtomicStatement;
+		expect(firstCondition.token.Type).toBe(TokenType.IS);
+		expect(firstCondition.name?.TokenLiteral()).toBe("x");
+		expect(firstCondition.value?.TokenLiteral()).toBe("cat");
+
+		const secondCondition = logicalStatement.right as AtomicStatement;
+		expect(secondCondition).toBeDefined();
+		expect(secondCondition.token.Type).toBe(TokenType.IS);
+		expect(secondCondition.name?.TokenLiteral()).toBe("x");
+		expect(secondCondition.value?.TokenLiteral()).toBe("black");
 	});
 });

@@ -71,16 +71,25 @@ export class Parser {
 
 		this.peekToken = this.lexer.GetNextToken(); // lsp rewel
 
-		// TODO: add other registerPrefix functions as well
+		// Register prefix handlers for all relevant TokenTypes
 		this.registerPrefix(TokenType.IDENTIFIER, (): Statement | undefined => {
 			return this.parseIdentifier();
 		});
 		this.registerPrefix(TokenType.FORALL, (): Statement | undefined => {
 			return this.parseQuantifierStatement();
 		});
+		this.registerPrefix(TokenType.EXISTS, (): Statement | undefined => {
+			return this.parseQuantifierStatement();
+		});
 		this.registerPrefix(TokenType.IS, (): Statement | undefined => {
 			log.debug("parseAtomicStatement called for IS");
 			return this.parseAtomicStatement(this.curToken);
+		});
+		this.registerPrefix(TokenType.AND, (): Statement | undefined => {
+			return this.ParseCompoundStatement();
+		});
+		this.registerPrefix(TokenType.IMPLIES, (): Statement | undefined => {
+			return this.ParseCompoundStatement();
 		});
 
 		this.error = [];
@@ -175,58 +184,48 @@ export class Parser {
 	private ParseCompoundStatement(): CompoundStatement | undefined {
 		const compound = new CompoundStatement(this.curToken);
 		if (!this.peekCheck(TokenType.LPAREN)) {
-			this.addError(
-				`Expected LPAREN after ${this.curToken.Type}, got ${this.peekToken.Type}`,
-			);
 			return undefined;
 		}
 		this.nextToken(); // current-token = (
 
-		if (!this.expectPeek(TokenType.IDENTIFIER)) {
-			this.addError(
-				`Expected IDENTIFIER after LPAREN, got ${this.peekToken.Type}`,
-			);
-			return undefined;
-		}
+		// NOTE: could be anything as long they're an valid statement token
+		// if (!this.peekCheck(TokenType.IDENTIFIER)) {
+		// 	return undefined;
+		// }
 		this.nextToken(); // current-token
 
 		compound.left = this.parseExpression(Expression.LOWEST);
 
-		if (!this.expectPeek(TokenType.COMMA)) {
-			this.addError(
-				`Expected COMMA after IDENTIFIER, got ${this.peekToken.Type}`,
-			);
-			return undefined;
-		}
-		this.nextToken(); // current-token = COMMA
+		// if (!this.peekCheck(TokenType.COMMA)) {
+		// 	return undefined;
+		// }
+		// this.nextToken(); // current-token = COMMA
 
-		if (!this.expectPeek(TokenType.IDENTIFIER)) {
-			this.addError(
-				`Expected IDENTIFIER after COMMA, got ${this.peekToken.Type}`,
-			);
-			return undefined;
-		}
+		// NOTE: could be anything as long they're an valid statement token
+		// if (!this.peekCheck(TokenType.IDENTIFIER)) {
+		// 	return undefined;
+		// }
 		this.nextToken(); // current-token
 
 		compound.right = this.parseExpression(Expression.LOWEST);
 
 		// check if they're going to EOF and still not found the RPAREN
-		let foundRPAREN = false;
-		while (
-			!this.curTokenIs(TokenType.RPAREN) &&
-			!this.curTokenIs(TokenType.SEMICOLON) // mean we are at the end of the statement
-		) {
-			this.nextToken();
+		// let foundRPAREN = false;
+		// while (
+		// 	!this.curTokenIs(TokenType.RPAREN) &&
+		// 	!this.curTokenIs(TokenType.SEMICOLON) // mean we are at the end of the statement
+		// ) {
+		// 	this.nextToken();
 
-			if (this.curTokenIs(TokenType.RPAREN)) {
-				foundRPAREN = true;
-				break;
-			}
-		}
-		if (!foundRPAREN) {
-			this.addError(`Expected RPAREN but got ${this.curToken.Type}`);
-			return undefined;
-		}
+		// 	if (this.curTokenIs(TokenType.RPAREN)) {
+		// 		foundRPAREN = true;
+		// 		break;
+		// 	}
+		// }
+		// if (!foundRPAREN) {
+		// 	this.addError(`Expected RPAREN but got ${this.curToken.Type}`);
+		// 	return undefined;
+		// }
 
 		return compound;
 	}

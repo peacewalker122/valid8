@@ -4,13 +4,21 @@
 Valid8 is a TypeScript-based toolkit for parsing and verifying mathematical logic notation, specifically supporting logical arguments in the form of premises and conclusions (P:/C: format). The core is a custom lexer and tokenization engine, designed to serve future development of parsing, logical verification, and user interfaces for teaching or validating logical reasoning.
 
 ## 2. Architecture Overview
-- **Lexer (`src/lexer.ts`)**: Implements a stateful tokenization engine using a state machine. Recognizes labels (Premise/Conclusion), logical keywords (IF, THEN, NOT, AND, OR), identifiers, and punctuation. Designed to support context-aware lexing (e.g., distinguishing 'if' as a keyword vs identifier).
-- **Token Types (`src/type.ts`)**: Enums and interfaces defining the types of tokens recognized (Premise, Conclusion, logical keywords, identifier, punctuation, etc.).
-- **Utility (`src/util.ts`)**: Includes the `isLetter` function (character checks) and a custom `log` object for debug/info/error output, toggled via the `VALID8_DEBUG` environment variable.
-- **Tests (`src/lexer.test.ts`)**: Jest-based unit tests focused on edge-case tokenization and label/keyword recognition.
-- **Configuration**: TypeScript config is in `tsconfig.json`. All scripts run in CommonJS mode. Tests are managed via `jest` and `ts-jest`.
-- **Documentation/Meta**: See Architecture.md for a high-level overview. OpenCode.md contains agentic guidelines (internal, not user-facing).
-- **Roadmap/TODO**: See `todo.html` for a visual breakdown of current and future development phases, including lexer priorities, parser plans, and testing/documentation goals.
+- **Lexer (`src/lexer/lexer.ts`)**: Stateful tokenization engine using a state machine. Recognizes labels (Premise/Conclusion), logical keywords (IF, THEN, NOT, AND, OR), identifiers, punctuation. Supports context-aware lexing.
+- **Parser (`src/parser/parser.ts`)**: Consumes lexer tokens, constructs AST nodes; supports quantifiers, logical/atomic statements, compound expressions. Key node types: ExpressionStatement, QuantifierStatement, AtomicStatement.
+- **AST Node Types (`src/parser/ast.ts`)**: Defines Statement, ExpressionStatement, QuantifierStatement, AtomicStatement (with token, name, value properties). Logical and quantifier nodes can act as both Statements and Arguments, per project comments.
+- **Token Types (`src/types/token.ts`)**: TokenType enum and token structure used by all AST nodes.
+- **Utility (`src/util/log.ts`)**: Project-specific logging helper, plus other utilities in util/ if needed.
+- **Tests:**
+   - Lexer: `src/lexer/lexer.test.ts`
+   - Parser/AST: `src/parser/parser.test.ts`
+   - Integration: `tests/` directory planned for future scenario-based tests.
+- **Configuration:** TypeScript config in `tsconfig.json`, CommonJS modules, Jest via `ts-jest` for all tests.
+- **Documentation/Meta:**
+   - Architecture.md: High-level technical overview
+   - OpenCode.md: Internal agent/debug/test notes
+   - AGENTS.md: Engineering handover & guidance
+- **Roadmap/TODO:** See `todo.html` for phased development (Lexer, Parser, Engine, UI, Testing/Docs).
 
 ## 3. Key Files
 - `src/lexer.ts`: Core lexer/state machine and tokenization logic

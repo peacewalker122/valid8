@@ -139,8 +139,8 @@ class IdentifierStatement extends Statement {
 		return this.value;
 	}
 	constructor(
-		private token: TokenType,
-		private value: string,
+		public token: TokenType,
+		public value: string,
 	) {
 		super();
 	}
