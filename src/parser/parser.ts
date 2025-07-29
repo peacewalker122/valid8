@@ -1,4 +1,5 @@
 import { log } from "../util/log";
+import { ParserError } from "../types/error";
 import type { Lexer } from "../lexer/lexer";
 import { type Token, TokenType } from "../types/token";
 import {
@@ -164,7 +165,6 @@ export class Parser {
 	private parseIdentifier(): IdentifierStatement | undefined {
 		if (!this.curTokenIs(TokenType.IDENTIFIER)) {
 			this.addError(`Expected IDENTIFIER but got ${this.curToken.Type}`);
-			return undefined;
 		}
 
 		const ident = new IdentifierStatement(
@@ -435,7 +435,9 @@ export class Parser {
 	// }
 
 	private addError(msg: string): void {
-		this.error.push(msg);
-		console.error(msg);
+		const line = this.curToken?.Line ?? 0;
+		const column = this.curToken?.Column ?? 0;
+		const token = this.curToken?.Literal ?? this.curToken?.Type;
+		throw new ParserError(msg, line, column, token);
 	}
 }

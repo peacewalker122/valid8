@@ -32,9 +32,6 @@ class Program extends Vertex {
 
 // LogicalStatement is used for statements like "IS", "LIKES", etc.
 class AtomicStatement extends Statement {
-	string(): string {
-		return `${this.name?.TokenLiteral() || ""} ${this.value?.string() || ""}`;
-	}
 	public name: IdentifierStatement | undefined;
 	public value: Statement | undefined; // WARN: could contain other function as well but should can be ignored in this case.
 
@@ -48,6 +45,10 @@ class AtomicStatement extends Statement {
 
 	TokenLiteral(): string {
 		return this.token.Literal ?? this.token.Type;
+	}
+
+	string(): string {
+		return `${this.name?.TokenLiteral() || ""} ${this.value?.string() || ""}`;
 	}
 }
 

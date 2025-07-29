@@ -78,15 +78,23 @@ PREMISE: IS(fish,animal);`;
 PREMISE: IS(cat, animal
 PREMISE: IS(fish, animal);`;
 		const statements = input.split(/\n+/).filter(Boolean);
-		const errors: string[] = [];
+		let errorCount = 0;
 		statements.forEach((stmt) => {
 			const lexer = new Lexer(stmt.endsWith(";") ? stmt : stmt + ";");
 			const parser = new Parser(lexer);
-			parser.parseProgram();
-			errors.push(...parser.error);
+			try {
+				parser.parseProgram();
+			} catch (err: any) {
+				if (err.name === "ParserError") {
+					errorCount++;
+					expect(err.message).toBeDefined();
+					expect(typeof err.line).toBe("number");
+					expect(typeof err.column).toBe("number");
+					expect(err.token).toBeDefined();
+				}
+			}
 		});
-		expect(errors.length).toBeGreaterThan(0);
-		console.log("Errors:", errors);
+		expect(errorCount).toBeGreaterThan(0);
 	});
 
 	it("should return correct debug string from string() method", () => {
