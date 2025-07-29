@@ -1,5 +1,6 @@
 import { TokenType } from "../types/token";
 import { Lexer } from "./lexer";
+import { LexerError } from "../types/error";
 
 describe("Lexer", () => {
 	it("should tokenize symbols ((),.:;)", () => {
@@ -63,7 +64,6 @@ describe("Lexer", () => {
     PREMISE: SOME(cat, EXISTS(animal, dog));
     PREMISE: FORALL(cat, dog);
     THEREFORE: IS(cat, dog);`;
-
 		const lexer = new Lexer(txt);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.PREMISE);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.COLON);
@@ -78,7 +78,6 @@ describe("Lexer", () => {
 		expect(ident2.Literal).toBe("animal");
 		expect(lexer.GetNextToken().Type).toBe(TokenType.RPAREN);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.SEMICOLON);
-
 		expect(lexer.GetNextToken().Type).toBe(TokenType.PREMISE);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.COLON);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.SOME);
@@ -99,7 +98,6 @@ describe("Lexer", () => {
 		expect(lexer.GetNextToken().Type).toBe(TokenType.RPAREN);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.RPAREN);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.SEMICOLON);
-
 		expect(lexer.GetNextToken().Type).toBe(TokenType.PREMISE);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.COLON);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.FORALL);
@@ -113,7 +111,6 @@ describe("Lexer", () => {
 		expect(ident7.Literal).toBe("dog");
 		expect(lexer.GetNextToken().Type).toBe(TokenType.RPAREN);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.SEMICOLON);
-
 		expect(lexer.GetNextToken().Type).toBe(TokenType.THEREFORE);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.COLON);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.IS);
@@ -134,24 +131,20 @@ describe("Lexer", () => {
 		const lexer = new Lexer("IS(cat, animal);");
 		expect(lexer.GetNextToken().Type).toBe(TokenType.IS);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.LPAREN);
-
 		const ident1 = lexer.GetNextToken();
 		expect(ident1.Type).toBe(TokenType.IDENTIFIER);
 		expect(ident1.Literal).toBe("cat");
-
 		expect(lexer.GetNextToken().Type).toBe(TokenType.COMMA);
-
 		const ident2 = lexer.GetNextToken();
 		expect(ident2.Type).toBe(TokenType.IDENTIFIER);
 		expect(ident2.Literal).toBe("animal");
-
 		expect(lexer.GetNextToken().Type).toBe(TokenType.RPAREN);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.SEMICOLON);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.EOF);
 	});
 
 	it("should tokenize identifiers", () => {
-		const lexer = new Lexer("PREMISE: FORALL(x,y);");
+		const lexer = new Lexer("PREMISE: FORALL(x, y);");
 		expect(lexer.GetNextToken().Type).toBe(TokenType.PREMISE);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.COLON);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.FORALL);
@@ -166,5 +159,27 @@ describe("Lexer", () => {
 		expect(lexer.GetNextToken().Type).toBe(TokenType.RPAREN);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.SEMICOLON);
 		expect(lexer.GetNextToken().Type).toBe(TokenType.EOF);
+	});
+
+	it("should throw LexerError on invalid character", () => {
+		const input = "PREMISE: A $ B;";
+		const lexer = new Lexer(input);
+		expect(() => {
+			while (true) {
+				lexer.GetNextToken();
+			}
+		}).toThrow(LexerError);
+
+		try {
+			while (true) {
+				lexer.GetNextToken();
+			}
+		} catch (err: any) {
+			expect(err).toBeInstanceOf(LexerError);
+			expect(err.message).toMatch(/Unexpected character '\$'/);
+			expect(err.line).toBeGreaterThanOrEqual(1);
+			expect(err.column).toBeGreaterThanOrEqual(1);
+			expect(err.value).toBe("$");
+		}
 	});
 });

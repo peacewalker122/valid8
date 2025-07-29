@@ -1,4 +1,5 @@
 import { type Token, TokenType } from "../types/token";
+import { LexerError } from "../types/error";
 import { log } from "../util/log";
 import { isLetter } from "../util/util";
 
@@ -59,6 +60,8 @@ export class Lexer {
 				if (word in this.knownLabel) {
 					tok = {
 						Type: this.knownLabel[word],
+						Line: this.line,
+						Column: this.column,
 					};
 					this.position += word.length; // Move position past the known
 					this.ch = this.input[this.position]; // Update current char
@@ -67,7 +70,10 @@ export class Lexer {
 					return tok;
 				}
 
-				return this.readIdentifier(); // mean it's just identifier...
+				const ident = this.readIdentifier();
+				ident.Line = this.line;
+				ident.Column = this.column;
+				return ident; // mean it's just identifier...
 			}
 			case LexerState.EXPECTING_STATEMENT: {
 				log.debug("Expecting statement, current char:", this.ch);
@@ -113,6 +119,15 @@ export class Lexer {
 			ch = this.input[wordPos];
 		}
 
+		log.debug(
+			"Peeked next word, last position:",
+			lastPos,
+			"word position:",
+			wordPos,
+			"current char:",
+			ch,
+		);
+
 		return this.input.slice(lastPos, wordPos);
 	}
 
@@ -127,6 +142,8 @@ export class Lexer {
 		return {
 			Type: expectedType,
 			Literal: this.input.slice(lastPos, this.position),
+			Line: this.line,
+			Column: this.column,
 		};
 	}
 
@@ -138,13 +155,30 @@ export class Lexer {
 			console.debug("End of input reached, current position:", this.position);
 			return {
 				Type: TokenType.EOF,
+				Line: this.line,
+				Column: this.column,
 			};
 		}
 
+		if (!isLetter(this.ch) && !this.symbols[this.ch]) {
+			throw new LexerError(
+				`Unexpected character '${this.ch}'`,
+				this.line,
+				this.column,
+				this.ch,
+			);
+		}
+
 		const word = this.peekNextWord();
+		console.debug(
+			"Reading identifier, current char:",
+			this.ch,
+			"next word:",
+			word,
+		);
 
 		// if the next word is not a symbol, it must be an identifier
-		if (!this.symbols[word] && word.length > 0) {
+		if (word && !this.symbols[word] && word.length > 0) {
 			// letters of identifier found
 			// NOTE: there's some problem regarding the tokentype here. The type here isn't always IDENTIFIER, it could be a quantifier or logical keyword.
 			log.debug("Found identifier word:", word);
@@ -159,30 +193,40 @@ export class Lexer {
 					this.state = LexerState.EXPECTING_LABEL; // reset
 					return {
 						Type: TokenType.SEMICOLON,
+						Line: this.line,
+						Column: this.column,
 					};
 				}
 				case "(": {
 					this.readChar();
 					return {
 						Type: TokenType.LPAREN,
+						Line: this.line,
+						Column: this.column,
 					};
 				}
 				case ")": {
 					this.readChar();
 					return {
 						Type: TokenType.RPAREN,
+						Line: this.line,
+						Column: this.column,
 					};
 				}
 				case ",": {
 					this.readChar();
 					return {
 						Type: TokenType.COMMA,
+						Line: this.line,
+						Column: this.column,
 					};
 				}
 				case ".": {
 					this.readChar();
 					return {
 						Type: TokenType.PERIOD,
+						Line: this.line,
+						Column: this.column,
 					};
 				}
 				case ":": {
@@ -190,6 +234,8 @@ export class Lexer {
 					this.state = LexerState.IN_LOGICAL_EXPRESSION;
 					return {
 						Type: TokenType.COLON,
+						Line: this.line,
+						Column: this.column,
 					};
 				}
 			}
@@ -201,11 +247,19 @@ export class Lexer {
 		return {
 			Type: TokenType.IDENTIFIER,
 			Literal: this.input.slice(startpost, this.position),
+			Line: this.line,
+			Column: this.column,
 		};
 	}
 
 	private readChar() {
 		if (this.input.length >= this.position) {
+			if (this.ch === "\n") {
+				this.line++;
+				this.column = 1;
+			} else {
+				this.column++;
+			}
 			this.position++;
 			this.ch = this.input[this.position];
 		}
