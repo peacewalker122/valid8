@@ -1,12 +1,14 @@
 import type { Token, TokenType } from "../types/token";
 import { Expression } from "../types/type";
 
-abstract class Vertex {
+abstract class Node {
+	abstract readonly type: string;
+
 	abstract TokenLiteral(): string;
 	abstract string(): string;
 }
 
-abstract class Statement extends Vertex {
+abstract class Statement extends Node {
 	abstract statementNode(): void;
 }
 
@@ -15,7 +17,8 @@ abstract class Statement extends Vertex {
 // 	abstract argumentNode(): void;
 // }
 
-class Program extends Vertex {
+class Program extends Node {
+	readonly type = "Program";
 	string(): string {
 		return this.predicates.map((p) => p.string()).join("\n");
 	}
@@ -32,6 +35,7 @@ class Program extends Vertex {
 
 // LogicalStatement is used for statements like "IS", "LIKES", etc.
 class AtomicStatement extends Statement {
+	readonly type = "AtomicStatement";
 	public name: IdentifierStatement | undefined;
 	public value: Statement | undefined; // WARN: could contain other function as well but should can be ignored in this case.
 
@@ -54,6 +58,8 @@ class AtomicStatement extends Statement {
 
 // QuantifierStatement is used for statements like "FORALL", "EXISTS", etc.
 class QuantifierStatement extends Statement {
+	readonly type = "QuantifierStatement";
+
 	string(): string {
 		return `${this.token.Literal} ${this.name?.TokenLiteral()} ${this.value?.TokenLiteral()}`;
 	}
@@ -73,6 +79,8 @@ class QuantifierStatement extends Statement {
 }
 
 class ExpressionStatement extends Statement {
+	readonly type = "ExpressionStatement";
+
 	public expression: Statement | undefined;
 
 	constructor(public token: Token) {
@@ -94,6 +102,8 @@ class ExpressionStatement extends Statement {
 }
 
 class CompoundStatement extends Statement {
+	readonly type = "CompoundStatement";
+
 	string(): string {
 		return `${this.left?.string() || ""} ${this.token.Literal} ${this.right?.string() || ""}`;
 	}
@@ -114,6 +124,8 @@ class CompoundStatement extends Statement {
 }
 
 class NegationStatement extends Statement {
+	readonly type = "NegationStatement";
+
 	string(): string {
 		return `NOT ${this.value?.string() || ""}`;
 	}
@@ -133,6 +145,8 @@ class NegationStatement extends Statement {
 }
 
 class IdentifierStatement extends Statement {
+	readonly type = "IdentifierStatement";
+
 	statementNode(): void {
 		// This method is intentionally left empty.
 	}
@@ -152,6 +166,8 @@ class IdentifierStatement extends Statement {
 }
 
 class LabelStatement extends Statement {
+	readonly type = "LabelStatement";
+
 	statementNode(): void {}
 	TokenLiteral(): string {
 		return this.token.Literal ?? this.token.Type; // return the literal value of the token, if available, otherwise the token type
@@ -166,7 +182,7 @@ class LabelStatement extends Statement {
 }
 
 export {
-	Vertex,
+	Node as Vertex,
 	Statement,
 	Program,
 	AtomicStatement,
