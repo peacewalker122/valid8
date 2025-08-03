@@ -14,6 +14,8 @@ export enum TokenType {
 	CAN = "CAN",
 	AND = "AND",
 	HAS = "HAS",
+	ARE = "ARE",
+	OR = "OR",
 
 	// Structural elements
 	LPAREN = "LPAREN",

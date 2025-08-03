@@ -1,7 +1,9 @@
 import type {
 	AtomicStatement,
+	CompoundStatement,
 	LabelStatement,
 	Program,
+	QuantifierStatement,
 	Statement,
 } from "../parser/ast";
 import { TokenType } from "../types/token";
@@ -21,15 +23,12 @@ export const Eval = (ast: Program, env: Environment): boolean => {
 				});
 
 				if (literal === TokenType.PREMISE) {
-					// just a label, no inference happens here. skip to next.
 					log.debug("Evaluating premise");
 					evalPremise(label, env);
 					break;
 				}
 
 				if (literal === TokenType.THEREFORE) {
-					// inference happen here.
-					// TODO: this is where we should evaluate the conclusion
 					log.debug("Evaluating conclusion");
 					return evalConclusion(label, env);
 				}
@@ -51,8 +50,41 @@ const evalPremise = (node: Statement, env: Environment) => {
 				throw new Error("AtomicStatement must have a name and value.");
 			}
 
-			// Store the premise in the environment.
-			env.map.set(atomic.name?.TokenLiteral(), atomic.value?.TokenLiteral());
+			switch (atomic.token.Type) {
+				case TokenType.IS: {
+					// Store the premise in the environment.
+					env.isMap.set(
+						atomic.name?.TokenLiteral(),
+						atomic.value?.TokenLiteral(),
+					);
+					break;
+				}
+				case TokenType.HAS: {
+					// Store the premise in the environment.
+					env.hasMap.set(
+						atomic.name?.TokenLiteral(),
+						atomic.value?.TokenLiteral(),
+					);
+					break;
+				}
+				case TokenType.CAN: {
+					// Store the premise in the environment.
+					env.canMap.set(
+						atomic.name?.TokenLiteral(),
+						atomic.value?.TokenLiteral(),
+					);
+					break;
+				}
+				case TokenType.ARE: {
+					// Store the premise in the environment.
+					env.areMap.set(
+						atomic.name?.TokenLiteral(),
+						atomic.value?.TokenLiteral(),
+					);
+					break;
+				}
+			}
+
 			break;
 		}
 		case "LabelStatement": {
@@ -69,27 +101,72 @@ const evalPremise = (node: Statement, env: Environment) => {
 
 const evalConclusion = (node: Statement, env: Environment): boolean => {
 	switch (node.type) {
-		// TODO: adjust.
 		case "AtomicStatement": {
 			const atomic = node as AtomicStatement;
-			// TODO: implement distinct function handling for premise and conclusion
-
 			if (!atomic.name || !atomic.value) {
 				throw new Error("AtomicStatement must have a name and value.");
 			}
 
-			// check is the value inside the statement are correct in the environment.
-			const value = env.map.get(atomic.name?.TokenLiteral());
-			log.debug("Evaluating conclusion for atomic statement:", {
-				name: atomic.name?.TokenLiteral(),
-				value: atomic.value?.TokenLiteral(),
-				envValue: value,
-			});
-			if (value === atomic.value?.TokenLiteral()) {
-				return true; // conclusion is valid.
-			} else {
-				return false; // conclusion is invalid.
+			switch (atomic.token.Type) {
+				case TokenType.IS: {
+					// check is the value inside the statement are correct in the environment.
+					const value = env.isMap.get(atomic.name?.TokenLiteral());
+					log.debug("Evaluating conclusion for atomic statement:", {
+						name: atomic.name?.TokenLiteral(),
+						value: atomic.value?.TokenLiteral(),
+						envValue: value,
+					});
+					let valueToCheck = atomic.value?.TokenLiteral();
+
+					// check is the value inside the statement are exist in the environment too.
+					const valueKey = env.getValue(atomic.value.TokenLiteral());
+					if (valueKey) {
+						valueToCheck = valueKey;
+					}
+
+					log.debug("Value to check:", {
+						value,
+						valueToCheck,
+					});
+
+					return value === valueToCheck;
+				}
+				case TokenType.HAS: {
+					// check is the value inside the statement are correct in the environment.
+					const value = env.hasMap.get(atomic.name?.TokenLiteral());
+					log.debug("Evaluating conclusion for atomic statement:", {
+						name: atomic.name?.TokenLiteral(),
+						value: atomic.value?.TokenLiteral(),
+						envValue: value,
+					});
+
+					return value === atomic.value?.TokenLiteral();
+				}
+				case TokenType.CAN: {
+					// check is the value inside the statement are correct in the environment.
+					const value = env.canMap.get(atomic.name?.TokenLiteral());
+					log.debug("Evaluating conclusion for atomic statement:", {
+						name: atomic.name?.TokenLiteral(),
+						value: atomic.value?.TokenLiteral(),
+						envValue: value,
+					});
+
+					return value === atomic.value?.TokenLiteral();
+				}
+				case TokenType.ARE: {
+					// check is the value inside the statement are correct in the environment.
+					const value = env.areMap.get(atomic.name?.TokenLiteral());
+					log.debug("Evaluating conclusion for atomic statement:", {
+						name: atomic.name?.TokenLiteral(),
+						value: atomic.value?.TokenLiteral(),
+						envValue: value,
+					});
+
+					return value === atomic.value?.TokenLiteral();
+				}
 			}
+
+			break;
 		}
 		case "LabelStatement": {
 			const label = node as LabelStatement;
@@ -99,6 +176,39 @@ const evalConclusion = (node: Statement, env: Environment): boolean => {
 			}
 
 			return evalConclusion(label.value, env);
+		}
+		case "QuantifierStatement": {
+			const quantifier = node as QuantifierStatement;
+
+			if (!quantifier.value) {
+				throw new Error("QuantifierStatement must have a value.");
+			}
+
+			// Evaluate the value inside the quantifier.
+			return evalConclusion(quantifier.value, env);
+		}
+		case "CompoundStatement": {
+			const compound = node as CompoundStatement;
+			if (!compound.left || !compound.right) {
+				throw new Error(
+					"CompoundStatement must have left and right statements.",
+				);
+			}
+
+			const leftEval = evalConclusion(compound.left, env);
+			const rightEval = evalConclusion(compound.right, env);
+
+			switch (compound.token.Type) {
+				case TokenType.AND: {
+					return leftEval && rightEval; // Both conditions must be true.
+				}
+				case TokenType.OR: {
+					return leftEval || rightEval; // At least one condition must be true.
+				}
+				case TokenType.IMPLIES: {
+					return !leftEval || rightEval; // If left is true, right must be true.
+				}
+			}
 		}
 	}
 	return false; // if no conclusion is reached, return false.
