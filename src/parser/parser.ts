@@ -295,6 +295,11 @@ export class Parser {
 		}
 
 		this.nextToken(); // current-token = COLON
+
+		this.nextToken(); // consume the COLON token
+
+		label.value = this.parseExpression(Expression.LOWEST);
+
 		return label;
 	}
 

@@ -1,14 +1,14 @@
 import type { Token, TokenType } from "../types/token";
 import { Expression } from "../types/type";
 
-abstract class Node {
+export abstract class NodeInterface {
 	abstract readonly type: string;
 
 	abstract TokenLiteral(): string;
 	abstract string(): string;
 }
 
-abstract class Statement extends Node {
+abstract class Statement extends NodeInterface {
 	abstract statementNode(): void;
 }
 
@@ -17,7 +17,7 @@ abstract class Statement extends Node {
 // 	abstract argumentNode(): void;
 // }
 
-class Program extends Node {
+class Program extends NodeInterface {
 	readonly type = "Program";
 	string(): string {
 		return this.predicates.map((p) => p.string()).join("\n");
@@ -167,6 +167,8 @@ class IdentifierStatement extends Statement {
 
 class LabelStatement extends Statement {
 	readonly type = "LabelStatement";
+	public value: Statement | undefined;
+	public token: Token;
 
 	statementNode(): void {}
 	TokenLiteral(): string {
@@ -176,13 +178,14 @@ class LabelStatement extends Statement {
 		return this.token.Literal || this.token.Type;
 	}
 
-	constructor(private token: Token) {
+	constructor(token: Token) {
 		super();
+		this.token = token;
 	}
 }
 
 export {
-	Node as Vertex,
+	NodeInterface as Vertex,
 	Statement,
 	Program,
 	AtomicStatement,
