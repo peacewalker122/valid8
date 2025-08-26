@@ -14,7 +14,6 @@ import {
 	AtomicStatement,
 	NegationStatement,
 	Program,
-	QuantifierStatement,
 	type Statement,
 	LabelStatement,
 } from "./ast";
@@ -45,8 +44,8 @@ export class Parser {
 
 		NOT: TokenGroup.NEGATION,
 
-		EXISTS: TokenGroup.QUANTIFIER,
-		FORALL: TokenGroup.QUANTIFIER,
+		// EXISTS: TokenGroup.QUANTIFIER,
+		// FORALL: TokenGroup.QUANTIFIER,
 
 		// punctuation
 		LPAREN: TokenGroup.PUNCTUATION,
@@ -63,6 +62,7 @@ export class Parser {
 		AND: TokenGroup.COMPOUND,
 		OR: TokenGroup.COMPOUND,
 		IMPLIES: TokenGroup.COMPOUND,
+		IFF: TokenGroup.ATOMIC, // bi-implication
 	};
 
 	constructor(lexer: Lexer) {
@@ -76,12 +76,12 @@ export class Parser {
 		this.registerPrefix(TokenType.IDENTIFIER, (): Statement | undefined => {
 			return this.parseIdentifier();
 		});
-		this.registerPrefix(TokenType.FORALL, (): Statement | undefined => {
-			return this.parseQuantifierStatement();
-		});
-		this.registerPrefix(TokenType.EXISTS, (): Statement | undefined => {
-			return this.parseQuantifierStatement();
-		});
+		// this.registerPrefix(TokenType.FORALL, (): Statement | undefined => {
+		// 	return this.parseQuantifierStatement();
+		// });
+		// this.registerPrefix(TokenType.EXISTS, (): Statement | undefined => {
+		// 	return this.parseQuantifierStatement();
+		// });
 		this.registerPrefix(TokenType.IS, (): Statement | undefined => {
 			log.debug("parseAtomicStatement called for IS");
 			return this.parseAtomicStatement(this.curToken);
@@ -130,11 +130,11 @@ export class Parser {
 					statement = this.parseAtomicStatement(this.curToken);
 					break;
 				}
-				case TokenGroup.QUANTIFIER: {
-					log.debug("parseQuantifierStatement called");
-					statement = this.parseQuantifierStatement();
-					break;
-				}
+				// case TokenGroup.QUANTIFIER: {
+				// 	log.debug("parseQuantifierStatement called");
+				// 	statement = this.parseQuantifierStatement();
+				// 	break;
+				// }
 				case TokenGroup.NEGATION: {
 					log.debug("ParseNegationStatement called");
 					statement = this.ParseNegationStatement();
@@ -303,41 +303,41 @@ export class Parser {
 		return label;
 	}
 
-	private parseQuantifierStatement(): QuantifierStatement | undefined {
-		const exprs = new QuantifierStatement(this.curToken);
-		if (!this.peekCheck(TokenType.LPAREN)) {
-			return undefined;
-		}
+	// private parseQuantifierStatement(): QuantifierStatement | undefined {
+	// 	const exprs = new QuantifierStatement(this.curToken);
+	// 	if (!this.peekCheck(TokenType.LPAREN)) {
+	// 		return undefined;
+	// 	}
 
-		this.nextToken(); // current-token = (
+	// 	this.nextToken(); // current-token = (
 
-		if (!this.peekCheck(TokenType.IDENTIFIER)) {
-			return undefined;
-		}
-		this.nextToken(); // current-token = IDENTIFIER
+	// 	if (!this.peekCheck(TokenType.IDENTIFIER)) {
+	// 		return undefined;
+	// 	}
+	// 	this.nextToken(); // current-token = IDENTIFIER
 
-		exprs.name = new IdentifierStatement(
-			this.curToken.Type,
-			this.curToken.Literal ?? "",
-		);
+	// 	exprs.name = new IdentifierStatement(
+	// 		this.curToken.Type,
+	// 		this.curToken.Literal ?? "",
+	// 	);
 
-		if (!this.peekCheck(TokenType.COMMA)) {
-			return undefined;
-		}
-		this.nextToken(); // current-token = COMMA
+	// 	if (!this.peekCheck(TokenType.COMMA)) {
+	// 		return undefined;
+	// 	}
+	// 	this.nextToken(); // current-token = COMMA
 
-		// if (!this.peekCheck(TokenType.IDENTIFIER)) {
-		// 	return undefined;
-		// }
-		this.nextToken(); // current-token = IDENTIFIER
+	// 	// if (!this.peekCheck(TokenType.IDENTIFIER)) {
+	// 	// 	return undefined;
+	// 	// }
+	// 	this.nextToken(); // current-token = IDENTIFIER
 
-		exprs.value = this.parseExpression(Expression.LOWEST);
-		log.debug(
-			`Parsed quantifier: ${exprs.name?.TokenLiteral()} with value: ${exprs.value?.TokenLiteral()}`,
-		);
+	// 	exprs.value = this.parseExpression(Expression.LOWEST);
+	// 	log.debug(
+	// 		`Parsed quantifier: ${exprs.name?.TokenLiteral()} with value: ${exprs.value?.TokenLiteral()}`,
+	// 	);
 
-		return exprs;
-	}
+	// 	return exprs;
+	// }
 
 	private parseAtomicStatement(token: Token): AtomicStatement | undefined {
 		const exprs = new AtomicStatement(token);

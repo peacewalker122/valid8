@@ -57,26 +57,26 @@ class AtomicStatement extends Statement {
 }
 
 // QuantifierStatement is used for statements like "FORALL", "EXISTS", etc.
-class QuantifierStatement extends Statement {
-	readonly type = "QuantifierStatement";
+// class QuantifierStatement extends Statement {
+// 	readonly type = "QuantifierStatement";
 
-	string(): string {
-		return `${this.token.Literal} ${this.name?.TokenLiteral()} ${this.value?.TokenLiteral()}`;
-	}
-	public name: IdentifierStatement | undefined;
-	public value: Statement | undefined; // recursive structure, can be another Expression or AtomicStatement
+// 	string(): string {
+// 		return `${this.token.Literal} ${this.name?.TokenLiteral()} ${this.value?.TokenLiteral()}`;
+// 	}
+// 	public name: IdentifierStatement | undefined;
+// 	public value: Statement | undefined; // recursive structure, can be another Expression or AtomicStatement
 
-	constructor(public token: Token) {
-		super();
-	}
+// 	constructor(public token: Token) {
+// 		super();
+// 	}
 
-	statementNode(): void {
-		throw new Error("Method not implemented.");
-	}
-	TokenLiteral(): string {
-		return this.token.Literal ?? this.token.Type; // return the literal value of the token, if available, otherwise the token type
-	}
-}
+// 	statementNode(): void {
+// 		throw new Error("Method not implemented.");
+// 	}
+// 	TokenLiteral(): string {
+// 		return this.token.Literal ?? this.token.Type; // return the literal value of the token, if available, otherwise the token type
+// 	}
+// }
 
 class ExpressionStatement extends Statement {
 	readonly type = "ExpressionStatement";
@@ -190,7 +190,7 @@ export {
 	Program,
 	AtomicStatement,
 	IdentifierStatement,
-	QuantifierStatement,
+	// QuantifierStatement,
 	ExpressionStatement,
 	CompoundStatement,
 	NegationStatement,
