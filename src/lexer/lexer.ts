@@ -28,8 +28,8 @@ export class Lexer {
 		IS: TokenType.IS,
 		IMPLIES: TokenType.IMPLIES,
 		CAN: TokenType.CAN,
-		EXISTS: TokenType.EXISTS,
-		FORALL: TokenType.FORALL,
+		// EXISTS: TokenType.EXISTS,
+		// FORALL: TokenType.FORALL,
 		AND: TokenType.AND,
 		HAS: TokenType.HAS,
 	};
