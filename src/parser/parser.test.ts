@@ -1,6 +1,12 @@
 import { Lexer } from "../lexer/lexer";
 import { TokenType } from "../types/token";
-import type { AtomicStatement, CompoundStatement, LabelStatement } from "./ast";
+import type {
+	AtomicStatement,
+	CompoundStatement,
+	ExpressionStatement,
+	LabelStatement,
+	Statement,
+} from "./ast";
 import { Parser } from "./parser";
 
 describe("Parser", () => {
@@ -178,14 +184,7 @@ PREMISE: IS(fish, animal);`;
 
 		const ast = parser.parseProgram();
 		expect(ast.predicates.length).toBe(1);
-		const node = ast.predicates[0];
-		if ("value" in node && typeof node.value !== "undefined") {
-			// It's a LabelStatement with a value
-			expect(node.value).toBeDefined();
-			expect((node.value as any)?.TokenLiteral()).toBe("identifier");
-		} else {
-			// It's a direct IdentifierStatement
-			expect((node as any).TokenLiteral()).toBe("identifier");
-		}
+		const node = ast.predicates[0] as ExpressionStatement;
+		expect(node.TokenLiteral()).toBe("identifier");
 	});
 });
