@@ -1,9 +1,10 @@
 import { Lexer } from "../lexer/lexer";
 import { TokenType } from "../types/token";
-import type {
+import {
 	AtomicStatement,
 	CompoundStatement,
 	ExpressionStatement,
+	IdentifierStatement,
 	LabelStatement,
 	Statement,
 } from "./ast";
@@ -177,14 +178,27 @@ PREMISE: IS(fish, animal);`;
 	});
 
 	it("should return expression identifier", () => {
-		const input = "identifier"; // arbitrary identifier
+		const input = "PREMISE: IMPLIES(x,y);\nTHEREFORE: y"; // arbitrary identifier
 		const lexer = new Lexer(input);
 		const parser = new Parser(lexer);
 		expect(parser.error.length).toBe(0);
 
 		const ast = parser.parseProgram();
-		expect(ast.predicates.length).toBe(1);
-		const node = ast.predicates[0] as ExpressionStatement;
-		expect(node.TokenLiteral()).toBe("identifier");
+		console.debug("predicates: ", ast.predicates);
+		expect(ast.predicates.length).toBe(2);
+		const node = ast.predicates[0] as LabelStatement;
+		expect(node.TokenLiteral()).toBe("PREMISE");
+
+		// check the node
+		const childNode = node.value! as CompoundStatement;
+		expect(childNode.left?.TokenLiteral()).toBe("x");
+		expect(childNode.right?.TokenLiteral()).toBe("y");
+
+		const node2 = ast.predicates[1] as LabelStatement;
+		expect(node2.TokenLiteral()).toEqual("THEREFORE");
+
+		expect(node2.value?.type).toContain("Identifier");
+		const childNode2 = node2.value! as IdentifierStatement;
+		expect(childNode2.TokenLiteral()).toEqual("y");
 	});
 });

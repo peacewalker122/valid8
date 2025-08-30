@@ -24,7 +24,7 @@ export class Lexer {
 	private logicalKeywords: Record<string, TokenType> = {
 		ALL: TokenType.ALL,
 		SOME: TokenType.SOME,
-		NO: TokenType.NO,
+		NO: TokenType.NOT,
 		IS: TokenType.IS,
 		IMPLIES: TokenType.IMPLIES,
 		CAN: TokenType.CAN,

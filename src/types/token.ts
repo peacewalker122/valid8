@@ -8,7 +8,7 @@ export enum TokenType {
 	// Logical operators
 	ALL = "ALL",
 	SOME = "SOME",
-	NO = "NO",
+	NOT = "NO",
 	IS = "IS",
 	IMPLIES = "IMPLIES",
 	CAN = "CAN",

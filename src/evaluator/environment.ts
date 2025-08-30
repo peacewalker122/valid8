@@ -1,3 +1,5 @@
+import { Optional } from "../types/type";
+
 /**
  * 		IS: TokenGroup.ATOMIC,
 		HAS: TokenGroup.ATOMIC,
@@ -6,30 +8,32 @@
 
  */
 export interface Environment {
-	isMap: Map<string, string | undefined>; // Store the environment variables from the parser.
-	hasMap: Map<string, string | undefined>; // Store the hasMap variables from the parser.
-	canMap: Map<string, string | undefined>; // Store the canMap variables from the parser.
-	areMap: Map<string, string | undefined>; // Store the areMap variables from the parser.
+	source: Map<string, string | undefined>;
+
+	// to store all variable name
+	variables: string[];
+
+	// to store the premise models
+	models: Models[];
 
 	getValue(key: string): string | undefined;
 }
 
+export interface Models {
+	operator: string;
+	left: string;
+	right: string;
+}
+
 export const env: Environment = {
-	isMap: new Map<string, string | undefined>(), // Store the environment variables from the parser.
-	hasMap: new Map<string, string | undefined>(), // Store the hasMap variables from the parser.
-	canMap: new Map<string, string | undefined>(), // Store the canMap variables from the parser.
-	areMap: new Map<string, string | undefined>(),
+	source: new Map<string, string | undefined>(),
+	variables: [],
 	getValue: function (key: string): string | undefined {
-		if (this.isMap.has(key)) {
-			return this.isMap.get(key);
-		} else if (this.hasMap.has(key)) {
-			return this.hasMap.get(key);
-		} else if (this.canMap.has(key)) {
-			return this.canMap.get(key);
-		} else if (this.areMap.has(key)) {
-			return this.areMap.get(key);
+		if (this.source.has(key)) {
+			return this.source.get(key);
 		}
 
 		return undefined;
 	},
+	models: [],
 };

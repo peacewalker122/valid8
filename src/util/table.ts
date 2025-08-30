@@ -1,11 +1,11 @@
 var Table = require("cli-table3");
 
 export const printTable = (headers: string[], rows: boolean[]): void => {
-	if (rows.length % headers.length !== 0) {
-		throw new Error(
-			"Rows length must be a multiple of headers length minus one.",
-		);
-	}
+	// if (rows.length % headers.length !== 0) {
+	// 	throw new Error(
+	// 		"Rows length must be a multiple of headers length minus one.",
+	// 	);
+	// }
 
 	var table = new Table({
 		head: headers,
