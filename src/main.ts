@@ -1,54 +1,66 @@
-import * as readline from 'readline';
-import { Lexer } from './lexer/lexer';
-import { Parser } from './parser/parser';
-import { Eval } from './evaluator/evaluator';
-import { env } from './evaluator/environment';
-import { log } from './util/log';
+import * as readline from "node:readline";
+import { env } from "./evaluator/environment";
+import { Eval } from "./evaluator/evaluator";
+import { Lexer } from "./lexer/lexer";
+import { Parser } from "./parser/parser";
+import { log } from "./util/log";
 
 function main() {
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-        prompt: 'valid8> '
-    });
+	const rl = readline.createInterface({
+		input: process.stdin,
+		output: process.stdout,
+		prompt: "valid8> ",
+	});
 
-    rl.prompt();
+	let inputBuffer = "";
 
-    rl.on('line', (line) => {
-        const input = line.trim();
-        if (input === 'exit' || input === 'quit') {
-            rl.close();
-            return;
-        }
+	rl.prompt();
 
-        if (input === '') {
-            rl.prompt();
-            return;
-        }
+	rl.on("line", (line) => {
+		const trimmed = line.trim();
+		if (trimmed === "exit" || trimmed === "quit") {
+			rl.close();
+			return;
+		}
 
-        try {
-            // Reset environment for each input
-            env.variables = [];
-            env.models = [];
-            env.source.clear();
+		// Accumulate the line
+		inputBuffer += line + "\n";
 
-            const lexer = new Lexer(input);
-            const parser = new Parser(lexer);
-            const ast = parser.parseProgram();
-            log.debug('Parsed AST:', ast);
-            const result = Eval(ast, env);
-            console.log('Validity:', result ? 'Valid' : 'Invalid');
-        } catch (error) {
-            console.error('Error:', error instanceof Error ? error.message : String(error));
-        }
+		// Check if buffer contains THEREFORE
+		if (inputBuffer.includes("THEREFORE")) {
+			// Process the accumulated buffer
+			const input = inputBuffer.trim();
+			if (input === "") {
+				console.log("No input to process.");
+				rl.prompt();
+				return;
+			}
 
-        rl.prompt();
-    });
+			try {
+				// Note: env is persistent, not reset here
+				const lexer = new Lexer(input);
+				const parser = new Parser(lexer);
+				const ast = parser.parseProgram();
+				log.debug("Parsed AST:", ast);
+				const result = Eval(ast, env);
+				console.log("Validity:", result ? "Valid" : "Invalid");
+			} catch (error) {
+				console.error(
+					"Error:",
+					error instanceof Error ? error.message : String(error),
+				);
+			}
 
-    rl.on('close', () => {
-        console.log('Goodbye!');
-        process.exit(0);
-    });
+			inputBuffer = ""; // Reset buffer after processing
+		}
+
+		rl.prompt();
+	});
+
+	rl.on("close", () => {
+		console.log("Goodbye!");
+		process.exit(0);
+	});
 }
 
 main();
