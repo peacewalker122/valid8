@@ -18,15 +18,12 @@ describe("Eval Test", () => {
 		const input = `PREMISE: IMPLIES(x, udin);
 THEREFORE: udin;`;
 		const ast = setupTest(input);
-		log.debug("AST:", ast);
 		expect(ast.predicates.length).toBe(2);
 		const environment = env;
 
 		const result = Eval(ast, environment);
 
-		// check the environment for the atomic statement
-		// expect(env.source.get("x")).toBe("udin");
-		// expect(result).toBe(true);
+		expect(result).toBe(false);
 	});
 
 	it("should eval the compound expression", () => {

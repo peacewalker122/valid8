@@ -150,10 +150,19 @@ const evalPremise = (node: Statement, env: Environment) => {
 	}
 };
 
+// STATE MACHINE
+// 1. Parse the conclusion and build the models of the logic expression. using the same format as the premise, AND(a, b), OR(a, b), NOT(a), IMPLIES(a, b) and so on.
+//    STATE are:
+//    a. BUILD_STRUCTURE: here the headers and the models were created.
+//    b. EVALUTE: here the models and conclusion were evaluated based on the variables.
+//    c. BUILD_TRUTH_TABLE: here the truth table were built based on the variables, models and conclusion.
+// 2. Evaluate the models based on the variables.
+// 3. Evaluate the conclusion based on the models.
+// 2. Build the truth table based on the variables and models.
 const evalConclusion = (node: Statement, env: Environment): boolean => {
-	let result = false;
 	let headers: string[] = [];
 	let rows: boolean[] = [];
+	let valid = true;
 
 	console.debug("tipe node: ", node.type);
 	switch (node.type) {
@@ -183,34 +192,72 @@ const evalConclusion = (node: Statement, env: Environment): boolean => {
 			const conclusion = `${lastModels} ∧ ${expr.TokenLiteral()}`;
 			headers.push(conclusion);
 
-			// evaluate the expression based on the input variabls and models. Start with all true then all false.
-			// tree? backtracking?
-			//
-			// eval into the conclusion then push the result iinto the rows.
-			// Backtracing with various inputs. Now how?
+			// evaluate the expression based on the input variables and models.
+			const uniqueVariables = [...new Set(env.variables || [])];
+			const n = uniqueVariables.length;
+			const total = 1 << n;
+			valid = true;
 
-			// 1. how to models the 2^n combinations of the variables.
-			// 2. how to evaulaute the models based on the variables.
-			// 3. how to evaulaute the conclusion based on the models.
-			// 4. how to build the truth table based on the variables, models and conclusion
+			for (let mask = 0; mask < total; mask++) {
+				const assignment: Record<string, boolean> = {};
+				for (let i = 0; i < n; i++) {
+					assignment[uniqueVariables[i]] = Boolean((mask >> i) & 1);
+				}
+
+				const row: boolean[] = [];
+				// add variable values
+				uniqueVariables.forEach((v) => row.push(assignment[v]));
+
+				// compute cumulative AND of models
+				let cum = true;
+				env.models?.forEach((model) => {
+					const val = evaluateModel(model, assignment);
+					cum = cum && val;
+					row.push(cum);
+				});
+
+				// conclusion value: cum && conclusion
+				const concName = expr.TokenLiteral();
+				const concVal = cum && assignment[concName];
+				row.push(concVal);
+
+				// check validity
+				if (cum && !concVal) {
+					valid = false;
+				}
+
+				// add to rows
+				rows.push(...row);
+			}
 		}
 	}
 
 	console.log("headers: ", headers);
-	printTable(headers, [true, true, true, true, true, true]);
-	return result; // if no conclusion is reached, return false.
+	printTable(headers, rows);
+	return valid;
 };
 
-// to build the answer we need and
+// the variables aren't limited to 2, it could be > 2 no maximum variables for now.
+// the combination are 2^n, where n is the sets from the variables
 const evalExpression = (
-	rows: [boolean][],
-	left: boolean,
-	right: boolean,
-	models: string[],
-	i: number,
-): void => {
-	//
-	// backtracking
+	variables: string[],
+	expr: (assignment: Record<string, boolean>) => boolean,
+): boolean[] => {
+	const n = variables.length;
+	const total = 1 << n;
+	const results: boolean[] = [];
+
+	for (let mask = 0; mask < total; mask++) {
+		const assignment: Record<string, boolean> = {};
+
+		for (let i = 0; i < n; i++) {
+			assignment[variables[i]] = Boolean((mask >> i) & 1);
+		}
+
+		results.push(expr(assignment));
+	}
+
+	return results;
 };
 
 const operatorSymbol = (operator: string): string => {
@@ -226,4 +273,22 @@ const operatorSymbol = (operator: string): string => {
 	}
 
 	return "?";
+};
+
+const evaluateModel = (
+	model: Models,
+	assignment: Record<string, boolean>,
+): boolean => {
+	const leftVal = assignment[model.left];
+	const rightVal = assignment[model.right];
+	switch (model.operator) {
+		case TokenType.IMPLIES:
+			return !leftVal || rightVal;
+		case TokenType.AND:
+			return leftVal && rightVal;
+		case TokenType.OR:
+			return leftVal || rightVal;
+		default:
+			throw new Error(`Unsupported operator: ${model.operator}`);
+	}
 };

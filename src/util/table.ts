@@ -17,7 +17,6 @@ export const printTable = (headers: string[], rows: boolean[]): void => {
 
 		for (let j = 0; j < headers.length; j++) {
 			const index = i + j;
-			console.debug("Index:", index, "i:", i, "j:", j);
 			tableRows.push(rows[index] ? "T" : "F");
 		}
 
