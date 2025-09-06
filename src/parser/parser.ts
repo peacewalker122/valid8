@@ -4,7 +4,6 @@ import type { Lexer } from "../lexer/lexer";
 import { type Token, TokenType } from "../types/token";
 import {
 	Expression,
-	type infixParsefn,
 	type prefixParsefn,
 } from "../types/type";
 import {
@@ -34,7 +33,7 @@ export class Parser {
 	public error: string[];
 
 	private prefixParseFns: Map<TokenType, prefixParsefn> = new Map();
-	private infixParseFns: Map<TokenType, infixParsefn> = new Map();
+
 
 	private TokenComponents: Record<string, TokenGroup> = {
 		IS: TokenGroup.ATOMIC,
@@ -83,7 +82,7 @@ export class Parser {
 		// 	return this.parseQuantifierStatement();
 		// });
 		this.registerPrefix(TokenType.IS, (): Statement | undefined => {
-			log.debug("parseAtomicStatement called for IS");
+	
 			return this.parseAtomicStatement(this.curToken);
 		});
 		this.registerPrefix(TokenType.AND, (): Statement | undefined => {
@@ -103,11 +102,12 @@ export class Parser {
 		this.curToken = this.peekToken;
 		this.peekToken = this.lexer.GetNextToken();
 		log.debug(
-			`nextToken called, current token: ${this.curToken.Type}, peek token: ${this.peekToken.Type}`,
+			`Parser: nextToken called, current token: ${this.curToken.Type}, peek token: ${this.peekToken.Type}`,
 		);
 	}
 
 	public parseProgram(): Program {
+		log.debug("Parser: Starting to parse program");
 		const ast: Program = new Program();
 
 		while (this.curToken.Type !== TokenType.EOF) {
@@ -121,12 +121,10 @@ export class Parser {
 
 			switch (tokengroup) {
 				case TokenGroup.LABEL: {
-					log.debug("ParseLabelStatement called");
 					statement = this.ParseLabelStatement();
 					break;
 				}
 				case TokenGroup.ATOMIC: {
-					log.debug("parseAtomicStatement called");
 					statement = this.parseAtomicStatement(this.curToken);
 					break;
 				}
@@ -136,17 +134,14 @@ export class Parser {
 				// 	break;
 				// }
 				case TokenGroup.NEGATION: {
-					log.debug("ParseNegationStatement called");
 					statement = this.ParseNegationStatement();
 					break;
 				}
 				case TokenGroup.COMPOUND: {
-					log.debug("ParseCompoundStatement called");
 					statement = this.ParseCompoundStatement();
 					break;
 				}
 				default: {
-					log.debug("ParseExpressionStatement called");
 					statement = this.ParseExpressionStatement();
 					break;
 				}
@@ -159,6 +154,7 @@ export class Parser {
 			this.nextToken();
 		}
 
+		log.debug(`Parser: Completed parsing program with ${ast.predicates.length} predicates`);
 		return ast;
 	}
 
@@ -177,7 +173,7 @@ export class Parser {
 			this.nextToken(); // consume the RPAREN token
 		}
 
-		log.debug(`Parsed identifier: ${ident.TokenLiteral()}`);
+		log.debug(`Parser: Parsed identifier: ${ident.TokenLiteral()}`);
 		return ident;
 	}
 
@@ -376,7 +372,7 @@ export class Parser {
 		this.nextToken();
 
 		exprs.value = this.parseExpression(Expression.LOWEST);
-		log.debug("Parsed atomic statement:", exprs.value);
+
 		this.nextToken(); // consume the value token
 
 		// check if they're going to EOF and still not found the RPAREN

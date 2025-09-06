@@ -56,7 +56,7 @@ export class Lexer {
 				// Expecting a label like "P:" or "C:"
 				this.skipWhitespace();
 				const word = this.peekNextWord();
-				log.debug("Expecting label, current word:", word);
+				log.debug("Lexer: Expecting label, current word:", word);
 				if (word in this.knownLabel) {
 					tok = {
 						Type: this.knownLabel[word],
@@ -76,11 +76,11 @@ export class Lexer {
 				return ident; // mean it's just identifier...
 			}
 			case LexerState.EXPECTING_STATEMENT: {
-				log.debug("Expecting statement, current char:", this.ch);
+				log.debug("Lexer: Expecting statement, current char:", this.ch);
 				this.skipWhitespace();
 				// expecting something like ALL, SOME, NO, IS, ARE, etc.
 				const word = this.peekNextWord();
-				log.debug("Next word in statement:", word);
+				log.debug("Lexer: Next word in statement:", word);
 				if (word in this.logicalKeywords) {
 					// if the next word is a logical keyword, read it and update the state to expect identifier
 					this.state = LexerState.IN_IDENTIFIER;
@@ -119,14 +119,7 @@ export class Lexer {
 			ch = this.input[wordPos];
 		}
 
-		log.debug(
-			"Peeked next word, last position:",
-			lastPos,
-			"word position:",
-			wordPos,
-			"current char:",
-			ch,
-		);
+
 
 		return this.input.slice(lastPos, wordPos);
 	}
@@ -152,7 +145,7 @@ export class Lexer {
 		const startpost = this.position;
 
 		if (!this.ch) {
-			log.debug("End of input reached, current position:", this.position);
+			log.debug("Lexer: End of input reached, current position:", this.position);
 			return {
 				Type: TokenType.EOF,
 				Line: this.line,
@@ -161,6 +154,7 @@ export class Lexer {
 		}
 
 		if (!isLetter(this.ch) && !this.symbols[this.ch]) {
+			log.error(`Lexer: Unexpected character '${this.ch}' at line ${this.line}, column ${this.column}`);
 			throw new LexerError(
 				`Unexpected character '${this.ch}'`,
 				this.line,
@@ -170,18 +164,16 @@ export class Lexer {
 		}
 
 		const word = this.peekNextWord();
-		log.debug("Reading identifier, current char:", this.ch, "next word:", word);
 
 		// if the next word is not a symbol, it must be an identifier
 		if (word && !this.symbols[word] && word.length > 0) {
 			// letters of identifier found
 			// NOTE: there's some problem regarding the tokentype here. The type here isn't always IDENTIFIER, it could be a quantifier or logical keyword.
-			log.debug("Found identifier word:", word);
+			log.debug("Lexer: Found identifier word:", word);
 			return this.readWord(this.logicalKeywords[word] || TokenType.IDENTIFIER);
 		}
 
 		while (this.ch) {
-			log.debug("Reading identifier, current char:", this.ch);
 			switch (this.ch) {
 				case ";": {
 					this.readChar();
@@ -271,13 +263,7 @@ export class Lexer {
 		}
 	}
 
-	private peekChar() {
-		if (this.input.length >= this.position) {
-			return this.input[this.position + 1]; // peek the next char
-		} else {
-			return "";
-		}
-	}
+
 
 	// private lookupIdent(ident: string): TokenType {
 	// 	if (ident in this.keywords) {

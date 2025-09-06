@@ -1,7 +1,6 @@
 import type {
 	AtomicStatement,
 	CompoundStatement,
-	ExpressionStatement,
 	IdentifierStatement,
 	LabelStatement,
 	Program,
@@ -23,24 +22,25 @@ import type { Environment, Models } from "./environment";
 // 3. on the result we need to build the truth table for the conclusion. Check every single premise to see and verify the conclusion. Is it true for every input of the models.
 
 export const Eval = (ast: Program, env: Environment): boolean => {
+	log.debug(`Evaluator: Starting evaluation of ${ast.predicates.length} predicates`);
 	// problem here, how do we know what type of the AST were dealing with?
 	for (const predicate of ast.predicates) {
 		switch (predicate.type) {
 			case "LabelStatement": {
 				const label = predicate as LabelStatement;
 				const literal = label.TokenLiteral();
-				log.debug("Evaluating label:", {
+				log.debug("Evaluator: Evaluating label:", {
 					label: literal,
 				});
 
 				if (literal === TokenType.PREMISE) {
-					log.debug("Evaluating premise");
+					log.debug("Evaluator: Evaluating premise");
 					evalPremise(label, env);
 					break;
 				}
 
 				if (literal === TokenType.THEREFORE) {
-					log.debug("Evaluating conclusion");
+					log.debug("Evaluator: Evaluating conclusion");
 
 					if (label.value === undefined) {
 						throw new Error("THEREFORE Can't be empty");
@@ -250,8 +250,7 @@ const evalConclusion = (node: Statement, env: Environment): boolean => {
 				const row: boolean[] = [];
 				// add variable values
 				uniqueVariables.forEach((v) => {
-					const _ = row.push(assignment[v]);
-					return;
+					row.push(assignment[v]);
 				});
 
 				// compute cumulative AND of models
@@ -276,31 +275,11 @@ const evalConclusion = (node: Statement, env: Environment): boolean => {
 	}
 
 	printTable(headers, rows);
+	log.debug(`Evaluator: Evaluation completed, result: ${valid}`);
 	return valid;
-};
+}
 
-// the variables aren't limited to 2, it could be > 2 no maximum variables for now.
-// the combination are 2^n, where n is the sets from the variables
-const evalExpression = (
-	variables: string[],
-	expr: (assignment: Record<string, boolean>) => boolean,
-): boolean[] => {
-	const n = variables.length;
-	const total = 1 << n;
-	const results: boolean[] = [];
 
-	for (let mask = 0; mask < total; mask++) {
-		const assignment: Record<string, boolean> = {};
-
-		for (let i = 0; i < n; i++) {
-			assignment[variables[i]] = Boolean((mask >> i) & 1);
-		}
-
-		results.push(expr(assignment));
-	}
-
-	return results;
-};
 
 const operatorSymbol = (operator: string): string => {
 	switch (operator) {

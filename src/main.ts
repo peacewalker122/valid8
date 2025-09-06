@@ -8,15 +8,21 @@ import { log } from "./util/log";
 
 function processInput(input: string) {
 	try {
+		log.debug("Main: Starting input processing");
 		const lexer = new Lexer(input);
 		const parser = new Parser(lexer);
 		const ast = parser.parseProgram();
-		log.debug("Parsed AST:", ast);
+		log.debug("Main: Parsed AST:", ast);
 		const result = Eval(ast, env);
+		log.debug(`Main: Evaluation result: ${result}`);
 		const color = result ? "\x1b[92m" : "\x1b[91m";
 		const reset = "\x1b[0m";
 		console.log("Validity:", color + (result ? "Valid" : "Invalid") + reset);
 	} catch (error) {
+		log.error(
+			"Main: Error processing input:",
+			error instanceof Error ? error.message : String(error),
+		);
 		console.error(
 			"Error:",
 			error instanceof Error ? error.message : String(error),
