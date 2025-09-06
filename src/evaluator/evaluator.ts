@@ -241,19 +241,11 @@ const evalConclusion = (node: Statement, env: Environment): boolean => {
 			const total = 1 << n;
 			valid = true;
 
-			console.debug("Trying to build models: ", env.models.length);
-			console.debug("Unique variables metadata: ", {
-				uniqueVariables: uniqueVariables,
-				total_variable: n,
-				total: total,
-			});
 			for (let mask = 0; mask < total; mask++) {
 				const assignment: Record<string, boolean> = {};
 				for (let i = 0; i < n; i++) {
 					assignment[uniqueVariables[i]] = Boolean((mask >> i) & 1);
 				}
-
-				console.debug("assignment attempt: ", mask);
 
 				const row: boolean[] = [];
 				// add variable values
@@ -329,7 +321,6 @@ const evaluateModel = (
 	model: Models,
 	assignment: Record<string, boolean>,
 ): boolean => {
-	// console.debug("Evaluating model: ", model, " with assignment: ", assignment);
 	if (model.result !== undefined) {
 		return model.result;
 	}
