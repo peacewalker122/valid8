@@ -1,5 +1,3 @@
-import { Optional } from "../types/type";
-
 /**
  * 		IS: TokenGroup.ATOMIC,
 		HAS: TokenGroup.ATOMIC,
@@ -23,6 +21,8 @@ export interface Models {
 	operator: string;
 	left: string;
 	right: string;
+
+	toToken(): string;
 }
 
 export const env: Environment = {

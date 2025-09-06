@@ -72,7 +72,9 @@ Here are some examples of valid statements in the language. Note: The first two 
 To run Valid8 on your machine:
 1. **Install dependencies**: Run `npm install` in the project directory to download all required packages.
 2. **Build the project**: Run `npm run build` to compile the TypeScript code into JavaScript (this creates the `dist/` folder).
-3. **Start the app**: Run `npm start` to execute the application. It will process logical statements and verify conclusions.
+3. **Start the app**:
+   - **Interactive mode**: Run `npm start` (or `node dist/main.js`) to enter interactive mode. Type premises and conclusions, ending with "THEREFORE" to process.
+   - **File mode**: Run `npm start some.txt` (or `node dist/main.js some.txt`) to read and verify logical statements from a file.
    - For debugging output, use `VALID8_DEBUG=1 npm start` to see detailed logs.
 
 Make sure you have Node.js and npm installed. The app currently supports atomic and compound expressions for verification.

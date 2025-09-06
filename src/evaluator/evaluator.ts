@@ -83,10 +83,22 @@ const evalPremise = (node: Statement, env: Environment) => {
 						compound.right.TokenLiteral(),
 					);
 
+					let prevModels: Models;
+					if ((env.models?.length ?? 0) > 0) {
+						prevModels = env.models?.[env.models.length - 1] as Models;
+					}
+
 					env.models?.push({
 						operator: TokenType.IMPLIES,
 						left: compound.left.TokenLiteral(),
 						right: compound.right.TokenLiteral(),
+						toToken(): string {
+							if (prevModels) {
+								return `(${prevModels.toToken()}) ${operatorSymbol("AND")} ${this.right}`;
+							}
+
+							return `${this.left} ${operatorSymbol(this.operator)} ${this.right}`;
+						},
 					});
 					break;
 				}
@@ -138,6 +150,34 @@ const evalPremise = (node: Statement, env: Environment) => {
 
 			break;
 		}
+		case "IdentifierStatement": {
+			const expr = node as IdentifierStatement;
+			if (!expr) {
+				throw new Error("IdentifierStatement must have a value.");
+			}
+
+			// identifier must be exist if there's previous model difined first.
+			if ((env.models?.length ?? 0) === 0) {
+				throw new Error(
+					"IdentifierStatement must be preceded by a model definition.",
+				);
+			}
+
+			// append the models with OR operator.
+			const lastModel = env.models?.[env.models.length - 1];
+			if (lastModel) {
+				env.models?.push({
+					operator: TokenType.OR,
+					left: lastModel.toToken(),
+					right: expr.TokenLiteral(),
+					toToken(): string {
+						return `(${this.left}) ${operatorSymbol(this.operator)} ${this.right}`;
+					},
+				});
+			}
+
+			break;
+		}
 		case "LabelStatement": {
 			const label = node as LabelStatement;
 
@@ -173,20 +213,12 @@ const evalConclusion = (node: Statement, env: Environment): boolean => {
 			});
 
 			let lastModels: string = "";
-
 			env.models?.forEach((el) => {
-				if (headers.length === env.variables?.length) {
-					const models = `${el.left} ${operatorSymbol(el.operator)} ${el.right}`;
-					headers.push(models);
-					lastModels = models;
-				} else {
-					const models = `${lastModels} ∧ ${el.left} ${operatorSymbol(el.operator)} ${el.right}`;
-					headers.push(models);
-					lastModels = models;
-				}
+				headers.push(el.toToken());
+				lastModels = el.toToken();
 			});
 			// finally the conclusion itself.
-			const conclusion = `${lastModels} ∧ ${expr.TokenLiteral()}`;
+			const conclusion = `(${lastModels}) ∧ ${expr.TokenLiteral()}`;
 			headers.push(conclusion);
 
 			// evaluate the expression based on the input variables and models.
