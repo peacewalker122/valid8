@@ -16,9 +16,10 @@ function setupTest(input: string): Program {
 describe("Eval Test", () => {
 	it("should eval the atomic expression", () => {
 		const input = `PREMISE: IMPLIES(x, udin);
+PREMISE: x;
 THEREFORE: udin;`;
 		const ast = setupTest(input);
-		expect(ast.predicates.length).toBe(2);
+		expect(ast.predicates.length).toBe(3);
 		const environment = env;
 
 		const result = Eval(ast, environment);

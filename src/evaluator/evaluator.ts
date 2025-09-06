@@ -167,11 +167,11 @@ const evalPremise = (node: Statement, env: Environment) => {
 			const lastModel = env.models?.[env.models.length - 1];
 			if (lastModel) {
 				env.models?.push({
-					operator: TokenType.OR,
-					left: lastModel.toToken(),
+					operator: TokenType.AND,
+					left: lastModel,
 					right: expr.TokenLiteral(),
 					toToken(): string {
-						return `(${this.left}) ${operatorSymbol(this.operator)} ${this.right}`;
+						return `(${lastModel.toToken()}) ${operatorSymbol(this.operator)} ${this.right}`;
 					},
 				});
 			}
@@ -212,14 +212,28 @@ const evalConclusion = (node: Statement, env: Environment): boolean => {
 				headers.push(e);
 			});
 
-			let lastModels: string = "";
+			let lastModels: Models = {
+				operator: "",
+				left: "",
+				right: "",
+				toToken: function (): string {
+					return "";
+				},
+			};
 			env.models?.forEach((el) => {
 				headers.push(el.toToken());
-				lastModels = el.toToken();
+				lastModels = el;
 			});
+
 			// finally the conclusion itself.
-			const conclusion = `(${lastModels}) ∧ ${expr.TokenLiteral()}`;
+			const conclusion = `(${lastModels.toToken()}) ${operatorSymbol("IMPLIES")} ${expr.TokenLiteral()}`;
 			headers.push(conclusion);
+			env.models.push({
+				operator: TokenType.IMPLIES,
+				left: lastModels,
+				right: expr.TokenLiteral(),
+				toToken: (): string => conclusion,
+			});
 
 			// evaluate the expression based on the input variables and models.
 			const uniqueVariables = [...new Set(env.variables || [])];
@@ -227,15 +241,26 @@ const evalConclusion = (node: Statement, env: Environment): boolean => {
 			const total = 1 << n;
 			valid = true;
 
+			console.debug("Trying to build models: ", env.models.length);
+			console.debug("Unique variables metadata: ", {
+				uniqueVariables: uniqueVariables,
+				total_variable: n,
+				total: total,
+			});
 			for (let mask = 0; mask < total; mask++) {
 				const assignment: Record<string, boolean> = {};
 				for (let i = 0; i < n; i++) {
 					assignment[uniqueVariables[i]] = Boolean((mask >> i) & 1);
 				}
 
+				console.debug("assignment attempt: ", mask);
+
 				const row: boolean[] = [];
 				// add variable values
-				uniqueVariables.forEach((v) => row.push(assignment[v]));
+				uniqueVariables.forEach((v) => {
+					const _ = row.push(assignment[v]);
+					return;
+				});
 
 				// compute cumulative AND of models
 				let cum = true;
@@ -245,18 +270,15 @@ const evalConclusion = (node: Statement, env: Environment): boolean => {
 					row.push(cum);
 				});
 
-				// conclusion value: cum && conclusion
-				const concName = expr.TokenLiteral();
-				const concVal = cum && assignment[concName];
-				row.push(concVal);
-
-				// check validity
-				if (cum && !concVal) {
-					valid = false;
-				}
+				const concModel = env.models?.[env.models.length - 1];
+				valid = concModel.result === true && valid;
 
 				// add to rows
 				rows.push(...row);
+				// reset model results
+				env.models?.forEach((model) => {
+					model.result = undefined;
+				});
 			}
 		}
 	}
@@ -307,16 +329,34 @@ const evaluateModel = (
 	model: Models,
 	assignment: Record<string, boolean>,
 ): boolean => {
-	const leftVal = assignment[model.left];
+	// console.debug("Evaluating model: ", model, " with assignment: ", assignment);
+	if (model.result !== undefined) {
+		return model.result;
+	}
+
+	let leftVal: boolean;
+	if (typeof model.left === "string") {
+		leftVal = assignment[model.left];
+	} else {
+		leftVal = evaluateModel(model.left as Models, assignment);
+	}
+
 	const rightVal = assignment[model.right];
+	let result = false;
 	switch (model.operator) {
 		case TokenType.IMPLIES:
-			return !leftVal || rightVal;
+			result = !leftVal || rightVal;
+			break;
 		case TokenType.AND:
-			return leftVal && rightVal;
+			result = leftVal && rightVal;
+			break;
 		case TokenType.OR:
-			return leftVal || rightVal;
+			result = leftVal || rightVal;
+			break;
 		default:
 			throw new Error(`Unsupported operator: ${model.operator}`);
 	}
+
+	model.result = result;
+	return result;
 };

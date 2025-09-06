@@ -13,7 +13,9 @@ function processInput(input: string) {
 		const ast = parser.parseProgram();
 		log.debug("Parsed AST:", ast);
 		const result = Eval(ast, env);
-		console.log("Validity:", result ? "Valid" : "Invalid");
+		const color = result ? "\x1b[92m" : "\x1b[91m";
+		const reset = "\x1b[0m";
+		console.log("Validity:", color + (result ? "Valid" : "Invalid") + reset);
 	} catch (error) {
 		console.error(
 			"Error:",

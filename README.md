@@ -63,10 +63,6 @@ The DSL (Domain-Specific Language) has a clear structure for writing logical sta
 
 ## Code Examples
 Here are some examples of valid statements in the language. Note: The first two examples use quantifiers, which are not yet supported in the current implementation.
-- `PREMISE: FORALL(x, IMPLIES(IS(x, cat), IS(x, animal))).` (All cats are animals. – Quantifier not implemented.)
-- `PREMISE: EXISTS(y, AND(IS(y, bird), CAN(y, fly))).` (There is a bird that can fly. – Quantifier not implemented.)
-- `PREMISE: IS(fluffy, cat).` (Fluffy is a cat.)
-- `THEREFORE: IS(fluffy, animal).` (Therefore, Fluffy is an animal.)
 
 ## How to Run the App
 To run Valid8 on your machine:
@@ -76,7 +72,6 @@ To run Valid8 on your machine:
    - **Interactive mode**: Run `npm start` (or `node dist/main.js`) to enter interactive mode. Type premises and conclusions, ending with "THEREFORE" to process.
    - **File mode**: Run `npm start some.txt` (or `node dist/main.js some.txt`) to read and verify logical statements from a file.
    - For debugging output, use `VALID8_DEBUG=1 npm start` to see detailed logs.
-
 Make sure you have Node.js and npm installed. The app currently supports atomic and compound expressions for verification.
 
 ## Expected Result

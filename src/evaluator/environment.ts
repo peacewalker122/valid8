@@ -19,8 +19,11 @@ export interface Environment {
 
 export interface Models {
 	operator: string;
-	left: string;
+	left: string | Models;
 	right: string;
+
+	// to store the evalution result of the model
+	result?: boolean | undefined;
 
 	toToken(): string;
 }
