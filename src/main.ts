@@ -83,7 +83,6 @@ function main() {
 	});
 
 	rl.on("close", () => {
-		console.log("Goodbye!");
 		process.exit(0);
 	});
 }

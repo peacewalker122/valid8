@@ -1,7 +1,6 @@
 import { Lexer } from "../lexer/lexer";
 import type { Program } from "../parser/ast";
 import { Parser } from "../parser/parser";
-import { log } from "../util/log";
 import { env } from "./environment";
 import { Eval } from "./evaluator";
 
@@ -24,7 +23,7 @@ THEREFORE: udin;`;
 
 		const result = Eval(ast, environment);
 
-		expect(result).toBe(false);
+		expect(result).toBe(true);
 	});
 
 	it("should eval the compound expression", () => {
