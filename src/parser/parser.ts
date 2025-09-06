@@ -177,7 +177,7 @@ export class Parser {
 			this.nextToken(); // consume the RPAREN token
 		}
 
-		console.debug(`Parsed identifier: ${ident.TokenLiteral()}`);
+		log.debug(`Parsed identifier: ${ident.TokenLiteral()}`);
 		return ident;
 	}
 
@@ -420,7 +420,7 @@ export class Parser {
 		const prefix = this.prefixParseFns.get(this.curToken.Type);
 
 		if (prefix === undefined) {
-			console.warn(
+			log.error(
 				`No prefix parse function registered for token: ${this.curToken.Type}`,
 			);
 			return undefined;

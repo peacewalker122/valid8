@@ -164,7 +164,6 @@ const evalConclusion = (node: Statement, env: Environment): boolean => {
 	let rows: boolean[] = [];
 	let valid = true;
 
-	console.debug("tipe node: ", node.type);
 	switch (node.type) {
 		case "IdentifierStatement": {
 			const expr = node as IdentifierStatement;
@@ -174,8 +173,6 @@ const evalConclusion = (node: Statement, env: Environment): boolean => {
 			});
 
 			let lastModels: string = "";
-
-			console.debug("model data: ", env.models);
 
 			env.models?.forEach((el) => {
 				if (headers.length === env.variables?.length) {
@@ -232,7 +229,6 @@ const evalConclusion = (node: Statement, env: Environment): boolean => {
 		}
 	}
 
-	console.log("headers: ", headers);
 	printTable(headers, rows);
 	return valid;
 };

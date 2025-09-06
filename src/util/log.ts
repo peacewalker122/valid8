@@ -1,6 +1,6 @@
 // Logging utility for VALID8
 // Usage: log.debug(), log.error(), log.info()
-const debugEnabled = !!process.env.VALID8_DEBUG;
+const debugEnabled = process.env.VALID8_DEBUG !== "1";
 export const log = {
 	debug: (...args: any[]) => {
 		if (debugEnabled) {
@@ -8,7 +8,9 @@ export const log = {
 		}
 	},
 	info: (...args: any[]) => {
-		console.info("[INFO]", ...args);
+		if (debugEnabled) {
+			console.info("[INFO]", ...args);
+		}
 	},
 	error: (...args: any[]) => {
 		console.error("[ERROR]", ...args);

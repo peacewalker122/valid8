@@ -152,7 +152,7 @@ export class Lexer {
 		const startpost = this.position;
 
 		if (!this.ch) {
-			console.debug("End of input reached, current position:", this.position);
+			log.debug("End of input reached, current position:", this.position);
 			return {
 				Type: TokenType.EOF,
 				Line: this.line,
@@ -170,12 +170,7 @@ export class Lexer {
 		}
 
 		const word = this.peekNextWord();
-		console.debug(
-			"Reading identifier, current char:",
-			this.ch,
-			"next word:",
-			word,
-		);
+		log.debug("Reading identifier, current char:", this.ch, "next word:", word);
 
 		// if the next word is not a symbol, it must be an identifier
 		if (word && !this.symbols[word] && word.length > 0) {
@@ -186,7 +181,7 @@ export class Lexer {
 		}
 
 		while (this.ch) {
-			console.debug("Reading identifier, current char:", this.ch);
+			log.debug("Reading identifier, current char:", this.ch);
 			switch (this.ch) {
 				case ";": {
 					this.readChar();
