@@ -1,0 +1,2 @@
+PREMISE: IS(fluffy, cat).
+THEREFORE: IS(fluffy, animal).

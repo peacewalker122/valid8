@@ -1,0 +1,3 @@
+PREMISE: IMPLIES(x, y).
+PREMISE: x.
+THEREFORE: y.

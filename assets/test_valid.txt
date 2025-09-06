@@ -1,2 +1,4 @@
 PREMISE: IMPLIES(x, ganteng);
+PREMISE: x;
 THEREFORE: ganteng;
+
