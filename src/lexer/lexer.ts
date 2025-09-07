@@ -24,7 +24,7 @@ export class Lexer {
 	private logicalKeywords: Record<string, TokenType> = {
 		ALL: TokenType.ALL,
 		SOME: TokenType.SOME,
-		NO: TokenType.NOT,
+		NOT: TokenType.NOT,
 		IS: TokenType.IS,
 		IMPLIES: TokenType.IMPLIES,
 		CAN: TokenType.CAN,
@@ -119,8 +119,6 @@ export class Lexer {
 			ch = this.input[wordPos];
 		}
 
-
-
 		return this.input.slice(lastPos, wordPos);
 	}
 
@@ -145,7 +143,10 @@ export class Lexer {
 		const startpost = this.position;
 
 		if (!this.ch) {
-			log.debug("Lexer: End of input reached, current position:", this.position);
+			log.debug(
+				"Lexer: End of input reached, current position:",
+				this.position,
+			);
 			return {
 				Type: TokenType.EOF,
 				Line: this.line,
@@ -154,7 +155,9 @@ export class Lexer {
 		}
 
 		if (!isLetter(this.ch) && !this.symbols[this.ch]) {
-			log.error(`Lexer: Unexpected character '${this.ch}' at line ${this.line}, column ${this.column}`);
+			log.error(
+				`Lexer: Unexpected character '${this.ch}' at line ${this.line}, column ${this.column}`,
+			);
 			throw new LexerError(
 				`Unexpected character '${this.ch}'`,
 				this.line,
@@ -262,8 +265,6 @@ export class Lexer {
 			this.readChar();
 		}
 	}
-
-
 
 	// private lookupIdent(ident: string): TokenType {
 	// 	if (ident in this.keywords) {

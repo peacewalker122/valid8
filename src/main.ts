@@ -18,6 +18,11 @@ function processInput(input: string) {
 		const color = result ? "\x1b[92m" : "\x1b[91m";
 		const reset = "\x1b[0m";
 		console.log("Validity:", color + (result ? "Valid" : "Invalid") + reset);
+
+		// Reset the environment after evaluation
+		env.source.clear();
+		env.variables = [];
+		env.models = [];
 	} catch (error) {
 		log.error(
 			"Main: Error processing input:",

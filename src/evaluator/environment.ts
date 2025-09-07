@@ -1,3 +1,5 @@
+import { Statement } from "../parser/ast";
+
 /**
  * 		IS: TokenGroup.ATOMIC,
 		HAS: TokenGroup.ATOMIC,
@@ -17,10 +19,12 @@ export interface Environment {
 	getValue(key: string): string | undefined;
 }
 
+// So, when there's an expression like AND between we could use the CompoundStatement for that while also ensuring the stmt contains either AtomicStatement or CompoundStatement
+// And by that we could recurisvely evaluate the statement
+//
+// Models here act as an absctraction layer for the Statement interface
 export interface Models {
-	operator: string;
-	left: string | Models;
-	right: string;
+	stmt: Statement;
 
 	// to store the evalution result of the model
 	result?: boolean | undefined;

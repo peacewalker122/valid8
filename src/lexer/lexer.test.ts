@@ -189,4 +189,25 @@ describe("Lexer", () => {
 			expect(err.value).toBe("$");
 		}
 	});
+
+	it("should tokenize negation expression", () => {
+		const lexer = new Lexer("PREMISE: NOT(IS(cat, animal));");
+		expect(lexer.GetNextToken().Type).toBe(TokenType.PREMISE);
+		expect(lexer.GetNextToken().Type).toBe(TokenType.COLON);
+		expect(lexer.GetNextToken().Type).toBe(TokenType.NOT);
+		expect(lexer.GetNextToken().Type).toBe(TokenType.LPAREN);
+		expect(lexer.GetNextToken().Type).toBe(TokenType.IS);
+		expect(lexer.GetNextToken().Type).toBe(TokenType.LPAREN);
+		const ident1 = lexer.GetNextToken();
+		expect(ident1.Type).toBe(TokenType.IDENTIFIER);
+		expect(ident1.Literal).toBe("cat");
+		expect(lexer.GetNextToken().Type).toBe(TokenType.COMMA);
+		const ident2 = lexer.GetNextToken();
+		expect(ident2.Type).toBe(TokenType.IDENTIFIER);
+		expect(ident2.Literal).toBe("animal");
+		expect(lexer.GetNextToken().Type).toBe(TokenType.RPAREN);
+		expect(lexer.GetNextToken().Type).toBe(TokenType.RPAREN);
+		expect(lexer.GetNextToken().Type).toBe(TokenType.SEMICOLON);
+		expect(lexer.GetNextToken().Type).toBe(TokenType.EOF);
+	});
 });

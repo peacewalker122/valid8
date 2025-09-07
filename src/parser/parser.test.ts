@@ -6,6 +6,7 @@ import {
 	ExpressionStatement,
 	IdentifierStatement,
 	LabelStatement,
+	NegationStatement,
 	Statement,
 } from "./ast";
 import { Parser } from "./parser";
@@ -200,5 +201,40 @@ PREMISE: IS(fish, animal);`;
 		expect(node2.value?.type).toContain("Identifier");
 		const childNode2 = node2.value! as IdentifierStatement;
 		expect(childNode2.TokenLiteral()).toEqual("y");
+	});
+
+	it("should parse the negation statement", () => {
+		const input = `PREMISE: IMPLIES(p,q);
+    PREMISE: NOT(q);
+    THEREFORE: NOT(p);`;
+		const lexer = new Lexer(input);
+		const parser = new Parser(lexer);
+		expect(parser.error.length).toBe(0);
+
+		const ast = parser.parseProgram();
+		console.debug("predicates: ", ast.predicates);
+		expect(ast.predicates.length).toBe(3);
+		const firstPremise = ast.predicates[0] as LabelStatement;
+		expect(firstPremise.token.Type).toBe(TokenType.PREMISE);
+		const firstImplication = firstPremise.value as CompoundStatement;
+		expect(firstImplication.token.Type).toBe(TokenType.IMPLIES);
+		const firstImplicationLeft = firstImplication.left as IdentifierStatement;
+		expect(firstImplicationLeft.TokenLiteral()).toBe("p");
+		const firstImplicationRight = firstImplication.right as IdentifierStatement;
+		expect(firstImplicationRight.TokenLiteral()).toBe("q");
+
+		const secondPremise = ast.predicates[1] as LabelStatement;
+		expect(secondPremise.token.Type).toBe(TokenType.PREMISE);
+		const negationQ = secondPremise.value as NegationStatement;
+		expect(negationQ.token.Type).toBe(TokenType.NOT);
+		const negatedQ = negationQ.value as IdentifierStatement;
+		expect(negatedQ.TokenLiteral()).toBe("q");
+
+		const conclusion = ast.predicates[2] as LabelStatement;
+		expect(conclusion.token.Type).toBe(TokenType.THEREFORE);
+		const negationP = conclusion.value as NegationStatement;
+		expect(negationP.token.Type).toBe(TokenType.NOT);
+		const negatedP = negationP.value as IdentifierStatement;
+		expect(negatedP.TokenLiteral()).toBe("p");
 	});
 });

@@ -2,10 +2,7 @@ import { log } from "../util/log";
 import { ParserError } from "../types/error";
 import type { Lexer } from "../lexer/lexer";
 import { type Token, TokenType } from "../types/token";
-import {
-	Expression,
-	type prefixParsefn,
-} from "../types/type";
+import { Expression, type prefixParsefn } from "../types/type";
 import {
 	CompoundStatement,
 	ExpressionStatement,
@@ -33,7 +30,6 @@ export class Parser {
 	public error: string[];
 
 	private prefixParseFns: Map<TokenType, prefixParsefn> = new Map();
-
 
 	private TokenComponents: Record<string, TokenGroup> = {
 		IS: TokenGroup.ATOMIC,
@@ -82,7 +78,6 @@ export class Parser {
 		// 	return this.parseQuantifierStatement();
 		// });
 		this.registerPrefix(TokenType.IS, (): Statement | undefined => {
-	
 			return this.parseAtomicStatement(this.curToken);
 		});
 		this.registerPrefix(TokenType.AND, (): Statement | undefined => {
@@ -90,6 +85,9 @@ export class Parser {
 		});
 		this.registerPrefix(TokenType.IMPLIES, (): Statement | undefined => {
 			return this.ParseCompoundStatement();
+		});
+		this.registerPrefix(TokenType.NOT, (): Statement | undefined => {
+			return this.ParseNegationStatement();
 		});
 
 		this.error = [];
@@ -154,7 +152,9 @@ export class Parser {
 			this.nextToken();
 		}
 
-		log.debug(`Parser: Completed parsing program with ${ast.predicates.length} predicates`);
+		log.debug(
+			`Parser: Completed parsing program with ${ast.predicates.length} predicates`,
+		);
 		return ast;
 	}
 
@@ -249,22 +249,22 @@ export class Parser {
 		);
 
 		// check if they're going to EOF and still not found the RPAREN
-		let foundRPAREN = false;
-		while (
-			!this.curTokenIs(TokenType.RPAREN) &&
-			!this.curTokenIs(TokenType.SEMICOLON) // mean we are at the end of the statement
-		) {
-			this.nextToken();
+		// let foundRPAREN = false;
+		// while (
+		// 	!this.curTokenIs(TokenType.RPAREN) &&
+		// 	!this.curTokenIs(TokenType.SEMICOLON) // mean we are at the end of the statement
+		// ) {
+		// 	this.nextToken();
 
-			if (this.curTokenIs(TokenType.RPAREN)) {
-				foundRPAREN = true;
-				break;
-			}
-		}
-		if (!foundRPAREN) {
-			this.addError(`Expected RPAREN but got ${this.curToken.Type}`);
-			return undefined;
-		}
+		// 	if (this.curTokenIs(TokenType.RPAREN)) {
+		// 		foundRPAREN = true;
+		// 		break;
+		// 	}
+		// }
+		// if (!foundRPAREN) {
+		// 	this.addError(`Expected RPAREN but got ${this.curToken.Type}`);
+		// 	return undefined;
+		// }
 
 		return negation;
 	}

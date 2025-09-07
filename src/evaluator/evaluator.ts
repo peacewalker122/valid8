@@ -1,11 +1,4 @@
-import type {
-	AtomicStatement,
-	CompoundStatement,
-	IdentifierStatement,
-	LabelStatement,
-	Program,
-	Statement,
-} from "../parser/ast";
+import * as ast from "../parser/ast";
 import { TokenType } from "../types/token";
 import { log } from "../util/log";
 import { printTable } from "../util/table";
@@ -21,13 +14,15 @@ import type { Environment, Models } from "./environment";
 //    e.g  IS(John, human) -> John is a human -> John is a variable, human is the value within the variable.
 // 3. on the result we need to build the truth table for the conclusion. Check every single premise to see and verify the conclusion. Is it true for every input of the models.
 
-export const Eval = (ast: Program, env: Environment): boolean => {
-	log.debug(`Evaluator: Starting evaluation of ${ast.predicates.length} predicates`);
+export const Eval = (ast: ast.Program, env: Environment): boolean => {
+	log.debug(
+		`Evaluator: Starting evaluation of ${ast.predicates.length} predicates`,
+	);
 	// problem here, how do we know what type of the AST were dealing with?
 	for (const predicate of ast.predicates) {
 		switch (predicate.type) {
 			case "LabelStatement": {
-				const label = predicate as LabelStatement;
+				const label = predicate as ast.LabelStatement;
 				const literal = label.TokenLiteral();
 				log.debug("Evaluator: Evaluating label:", {
 					label: literal,
@@ -57,7 +52,7 @@ export const Eval = (ast: Program, env: Environment): boolean => {
 	return false;
 };
 
-const evalPremise = (node: Statement, env: Environment) => {
+const evalPremise = (node: ast.Statement, env: Environment) => {
 	// for each premise within the program, we need to store the boolean model of the premises into the environment.
 	// the question left: how do we store the premise models into the enviroment?
 	// key value? Not really, confused how to store the logic models here.
@@ -70,7 +65,7 @@ const evalPremise = (node: Statement, env: Environment) => {
 
 	switch (node.type) {
 		case "CompoundStatement": {
-			const compound = node as CompoundStatement;
+			const compound = node as ast.CompoundStatement;
 
 			if (!compound.left || !compound.right) {
 				throw new Error("CompoundStatement must have complete expression");
@@ -89,15 +84,13 @@ const evalPremise = (node: Statement, env: Environment) => {
 					}
 
 					env.models?.push({
-						operator: TokenType.IMPLIES,
-						left: compound.left.TokenLiteral(),
-						right: compound.right.TokenLiteral(),
+						stmt: compound,
 						toToken(): string {
 							if (prevModels) {
-								return `(${prevModels.toToken()}) ${operatorSymbol("AND")} ${this.right}`;
+								return `(${prevModels.toToken()}) ∧ ${compound.right?.TokenLiteral()}`;
 							}
 
-							return `${this.left} ${operatorSymbol(this.operator)} ${this.right}`;
+							return `${compound.left?.TokenLiteral()} → ${compound.right?.TokenLiteral()}`;
 						},
 					});
 					break;
@@ -107,7 +100,7 @@ const evalPremise = (node: Statement, env: Environment) => {
 			break;
 		}
 		case "AtomicStatement": {
-			const atomic = node as AtomicStatement;
+			const atomic = node as ast.AtomicStatement;
 
 			if (!atomic.name || !atomic.value) {
 				throw new Error("AtomicStatement must have a name and value.");
@@ -151,7 +144,7 @@ const evalPremise = (node: Statement, env: Environment) => {
 			break;
 		}
 		case "IdentifierStatement": {
-			const expr = node as IdentifierStatement;
+			const expr = node as ast.IdentifierStatement;
 			if (!expr) {
 				throw new Error("IdentifierStatement must have a value.");
 			}
@@ -166,12 +159,48 @@ const evalPremise = (node: Statement, env: Environment) => {
 			// append the models with OR operator.
 			const lastModel = env.models?.[env.models.length - 1];
 			if (lastModel) {
+				const compound = new ast.CompoundStatement({
+					Type: TokenType.AND,
+					Literal: "∧",
+				});
+				compound.left = lastModel.stmt;
+				compound.right = expr;
 				env.models?.push({
-					operator: TokenType.AND,
-					left: lastModel,
-					right: expr.TokenLiteral(),
+					stmt: compound,
 					toToken(): string {
-						return `(${lastModel.toToken()}) ${operatorSymbol(this.operator)} ${this.right}`;
+						return `(${lastModel.toToken()}) ∧ ${expr.TokenLiteral()}`;
+					},
+				});
+			}
+
+			break;
+		}
+		case "NegationStatement": {
+			const negation = node as ast.NegationStatement;
+			if (!negation.value) {
+				throw new Error("NegationStatement must have a value.");
+			}
+
+			// negation must be exist if there's previous model difined first.
+			if ((env.models?.length ?? 0) === 0) {
+				throw new Error(
+					"NegationStatement must be preceded by a model definition.",
+				);
+			}
+
+			// append the models with NOT operator.
+			const lastModel = env.models?.[env.models.length - 1];
+			if (lastModel) {
+				const compound = new ast.CompoundStatement({
+					Type: TokenType.AND,
+					Literal: "∧",
+				});
+				compound.left = lastModel.stmt;
+				compound.right = negation;
+				env.models?.push({
+					stmt: compound,
+					toToken: (): string => {
+						return `(${lastModel.toToken()}) ∧ ¬${negation.value?.TokenLiteral()}`;
 					},
 				});
 			}
@@ -179,7 +208,7 @@ const evalPremise = (node: Statement, env: Environment) => {
 			break;
 		}
 		case "LabelStatement": {
-			const label = node as LabelStatement;
+			const label = node as ast.LabelStatement;
 
 			if (!label.value) {
 				throw new Error("LabelStatement must have a value.");
@@ -199,39 +228,35 @@ const evalPremise = (node: Statement, env: Environment) => {
 // 2. Evaluate the models based on the variables.
 // 3. Evaluate the conclusion based on the models.
 // 2. Build the truth table based on the variables and models.
-const evalConclusion = (node: Statement, env: Environment): boolean => {
+const evalConclusion = (node: ast.Statement, env: Environment): boolean => {
 	let headers: string[] = [];
 	let rows: boolean[] = [];
 	let valid = true;
 
 	switch (node.type) {
 		case "IdentifierStatement": {
-			const expr = node as IdentifierStatement;
+			const expr = node as ast.IdentifierStatement;
+
 			// append the headers and rows from the expression evaluation
 			env.variables?.forEach((e) => {
 				headers.push(e);
 			});
-
-			let lastModels: Models = {
-				operator: "",
-				left: "",
-				right: "",
-				toToken: function (): string {
-					return "";
-				},
-			};
 			env.models?.forEach((el) => {
 				headers.push(el.toToken());
-				lastModels = el;
 			});
 
 			// finally the conclusion itself.
-			const conclusion = `(${lastModels.toToken()}) ${operatorSymbol("IMPLIES")} ${expr.TokenLiteral()}`;
+			const lastModels = env.models?.[env.models.length - 1] as Models;
+			const conclusion = `(${lastModels.toToken()}) ${OPERATOR_SYMBOLS[TokenType.IMPLIES]} ${expr.TokenLiteral()}`;
 			headers.push(conclusion);
+			const compound = new ast.CompoundStatement({
+				Type: TokenType.IMPLIES,
+				Literal: "→",
+			});
+			compound.left = lastModels.stmt;
+			compound.right = expr;
 			env.models.push({
-				operator: TokenType.IMPLIES,
-				left: lastModels,
-				right: expr.TokenLiteral(),
+				stmt: compound,
 				toToken: (): string => conclusion,
 			});
 
@@ -254,15 +279,79 @@ const evalConclusion = (node: Statement, env: Environment): boolean => {
 				});
 
 				// compute cumulative AND of models
-				let cum = true;
 				env.models?.forEach((model) => {
 					const val = evaluateModel(model, assignment);
-					cum = cum && val;
-					row.push(cum);
+					row.push(val);
 				});
 
-				const concModel = env.models?.[env.models.length - 1];
-				valid = concModel.result === true && valid;
+				// we only need to care about the last model which is the conclusion.
+				const lastModelValue = env.models?.[env.models.length - 1]?.result;
+				valid = valid && lastModelValue === true;
+
+				// add to rows
+				rows.push(...row);
+				// reset model results
+				env.models?.forEach((model) => {
+					model.result = undefined;
+				});
+			}
+
+			break;
+		}
+
+		case "NegationStatement": {
+			const expr = node as ast.NegationStatement;
+
+			// append the headers and rows from the expression evaluation
+			env.variables?.forEach((e) => {
+				headers.push(e);
+			});
+			env.models?.forEach((el) => {
+				headers.push(el.toToken());
+			});
+
+			// finally the conclusion itself.
+			const lastModels = env.models?.[env.models.length - 1] as Models;
+			const conclusion = `(${lastModels.toToken()}) ${OPERATOR_SYMBOLS[TokenType.IMPLIES]} ${OPERATOR_SYMBOLS[TokenType.NOT]}${expr.value?.TokenLiteral()}`;
+			headers.push(conclusion);
+			const compound = new ast.CompoundStatement({
+				Type: TokenType.IMPLIES,
+				Literal: "→",
+			});
+			compound.left = lastModels.stmt;
+			compound.right = expr;
+			env.models.push({
+				stmt: compound,
+				toToken: (): string => conclusion,
+			});
+
+			// evaluate the expression based on the input variables and models.
+			const uniqueVariables = [...new Set(env.variables || [])];
+			const n = uniqueVariables.length;
+			const total = 1 << n;
+			valid = true;
+
+			for (let mask = 0; mask < total; mask++) {
+				const assignment: Record<string, boolean> = {};
+				for (let i = 0; i < n; i++) {
+					assignment[uniqueVariables[i]] = Boolean((mask >> i) & 1);
+				}
+
+				const row: boolean[] = [];
+				// add variable values
+				uniqueVariables.forEach((v) => {
+					row.push(assignment[v]);
+				});
+
+				// compute cumulative AND of models
+				env.models?.forEach((model) => {
+					const val = evaluateModel(model, assignment);
+					row.push(val);
+				});
+
+				// we only need to care about the last model which is the conclusion.
+				const lastModelValue = env.models?.[env.models.length - 1]?.result;
+				valid = valid && lastModelValue === true;
 
 				// add to rows
 				rows.push(...row);
@@ -277,23 +366,63 @@ const evalConclusion = (node: Statement, env: Environment): boolean => {
 	printTable(headers, rows);
 	log.debug(`Evaluator: Evaluation completed, result: ${valid}`);
 	return valid;
-}
+};
 
+const OPERATOR_SYMBOLS: Record<string, string> = {
+	[TokenType.AND]: "∧",
+	[TokenType.OR]: "∨",
+	[TokenType.NOT]: "¬",
+	[TokenType.IMPLIES]: "→",
+};
 
+const evaluateStatement = (
+	stmt: ast.Statement,
+	assignment: Record<string, boolean>,
+): boolean => {
+	switch (stmt.type) {
+		case "CompoundStatement": {
+			const compound = stmt as ast.CompoundStatement;
+			if (!compound.left || !compound.right) {
+				throw new Error("CompoundStatement must have left and right");
+			}
+			const leftVal = evaluateStatement(compound.left, assignment);
+			const rightVal = evaluateStatement(compound.right, assignment);
+			switch (compound.token.Type) {
+				case TokenType.IMPLIES:
+					return !leftVal || rightVal;
+				case TokenType.AND:
+					return leftVal && rightVal;
+				case TokenType.OR:
+					return leftVal || rightVal;
+				default:
+					throw new Error(`Unsupported operator: ${compound.token.Type}`);
+			}
+		}
+		case "IdentifierStatement": {
+			const ident = stmt as ast.IdentifierStatement;
+			return assignment[ident.TokenLiteral()];
+		}
+		case "NegationStatement": {
+			const neg = stmt as ast.NegationStatement;
+			if (!neg.value) {
+				throw new Error("NegationStatement must have value");
+			}
 
-const operatorSymbol = (operator: string): string => {
-	switch (operator) {
-		case TokenType.AND:
-			return "∧";
-		case TokenType.OR:
-			return "∨";
-		case TokenType.NOT:
-			return "¬";
-		case TokenType.IMPLIES:
-			return "→";
+			return !evaluateStatement(neg.value, assignment);
+		}
+		case "AtomicStatement":
+			// For now, assume atomic is true, but may need to handle differently
+			return true;
+		case "LabelStatement": {
+			const label = stmt as ast.LabelStatement;
+			if (!label.value) {
+				throw new Error("LabelStatement must have value");
+			}
+			return evaluateStatement(label.value, assignment);
+		}
+		default:
+			throw new Error(`Unsupported statement type: ${stmt.type}`);
 	}
-
-	return "?";
 };
 
 const evaluateModel = (
@@ -304,29 +433,7 @@ const evaluateModel = (
 		return model.result;
 	}
 
-	let leftVal: boolean;
-	if (typeof model.left === "string") {
-		leftVal = assignment[model.left];
-	} else {
-		leftVal = evaluateModel(model.left as Models, assignment);
-	}
+	model.result = evaluateStatement(model.stmt, assignment);
 
-	const rightVal = assignment[model.right];
-	let result = false;
-	switch (model.operator) {
-		case TokenType.IMPLIES:
-			result = !leftVal || rightVal;
-			break;
-		case TokenType.AND:
-			result = leftVal && rightVal;
-			break;
-		case TokenType.OR:
-			result = leftVal || rightVal;
-			break;
-		default:
-			throw new Error(`Unsupported operator: ${model.operator}`);
-	}
-
-	model.result = result;
-	return result;
+	return model.result;
 };
