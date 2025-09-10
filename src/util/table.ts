@@ -24,5 +24,6 @@ export const printTable = (headers: string[], rows: boolean[]): void => {
 		table.push(tableRows);
 	}
 
+	console.log("\n");
 	console.log(table.toString());
 };

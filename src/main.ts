@@ -37,7 +37,7 @@ function processInput(input: string) {
 
 function main() {
 	// Check for help flag
-	if (process.argv.includes('-h') || process.argv.includes('--help')) {
+	if (process.argv.includes("-h") || process.argv.includes("--help")) {
 		console.log(`Valid8 - Logical Argument Validator
 
 Usage:
@@ -62,9 +62,9 @@ For more info, see README.md`);
 	}
 
 	// Check for -v flag
-	if (process.argv.includes('-v')) {
-		process.env.VALID8_VERBOSE = '1';
-		process.argv.splice(process.argv.indexOf('-v'), 1);
+	if (process.argv.includes("-v")) {
+		process.env.VALID8_VERBOSE = "1";
+		process.argv.splice(process.argv.indexOf("-v"), 1);
 	}
 
 	const filePath = process.argv[2];
