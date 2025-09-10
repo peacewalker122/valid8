@@ -36,6 +36,37 @@ function processInput(input: string) {
 }
 
 function main() {
+	// Check for help flag
+	if (process.argv.includes('-h') || process.argv.includes('--help')) {
+		console.log(`Valid8 - Logical Argument Validator
+
+Usage:
+  valid8 [options] [file]
+
+Options:
+  -h, --help     Show this help message
+  -v             Enable verbose logging
+  --version      Show version
+
+Examples:
+  valid8                        # Interactive mode
+  valid8 assets/modus_ponens.txt # Validate file
+  valid8 -v assets/modus_ponens.txt # Verbose output
+  valid8 --help                 # Show help
+
+Environment:
+  VALID8_DEBUG=1  Enable debug logging (same as -v)
+
+For more info, see README.md`);
+		process.exit(0);
+	}
+
+	// Check for -v flag
+	if (process.argv.includes('-v')) {
+		process.env.VALID8_VERBOSE = '1';
+		process.argv.splice(process.argv.indexOf('-v'), 1);
+	}
+
 	const filePath = process.argv[2];
 	if (filePath) {
 		try {

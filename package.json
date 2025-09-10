@@ -1,12 +1,15 @@
 {
 	"name": "valid8",
 	"version": "1.0.0",
-	"description": "",
-	"main": "index.js",
+	"description": "Nothing last forever this is the future now.",
+	"main": "dist/main.js",
 	"scripts": {
 		"test": "jest",
 		"build": "tsc",
-		"start": "node dist/main.js"
+		"start": "node dist/main.js",
+		"package": "pkg --targets node18-linux-x64 dist/main.js -o valid8",
+		"package-all": "npm run build && npm run package",
+		"clean": "rm -rf dist/ main-linux main-macos main-win.exe"
 	},
 	"keywords": [],
 	"author": "",
