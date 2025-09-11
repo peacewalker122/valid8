@@ -1,0 +1,24 @@
+name: Release
+on:
+  push:
+    branches: [release]
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npm run package-all
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ github.run_number }}
+          name: Release ${{ github.run_number }}
+          files: valid8
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
