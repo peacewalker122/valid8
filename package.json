@@ -7,9 +7,24 @@
 		"test": "jest",
 		"build": "tsc",
 		"start": "node dist/main.js",
-		"package": "pkg --targets node18-linux-x64 dist/main.js -o valid8",
+		"package": "pkg --targets node18-win-x64,node18-macos-x64,node18-linux-x64 dist/main.js --out-path ./bin",
 		"package-all": "npm run build && npm run package",
-		"clean": "rm -rf dist/ main-linux main-macos main-win.exe"
+		"clean": "rm -rf dist/ bin/"
+	},
+	"release": {
+		"branches": [
+			"release"
+		],
+		"plugins": [
+			"@semantic-release/commit-analyzer",
+			"@semantic-release/release-notes-generator",
+			[
+				"@semantic-release/github",
+				{
+					"assets": "bin/*"
+				}
+			]
+		]
 	},
 	"keywords": [],
 	"author": "",
@@ -17,11 +32,14 @@
 	"type": "commonjs",
 	"devDependencies": {
 		"@jest/globals": "^30.0.4",
+		"@semantic-release/changelog": "^6.0.3",
+		"@semantic-release/git": "^10.0.1",
 		"@types/jest": "^30.0.0",
 		"jest": "^30.0.4",
+		"pkg": "^5.8.1",
+		"semantic-release": "^23.1.1",
 		"ts-jest": "^29.4.0",
-		"typescript": "^5.8.3",
-		"pkg": "^5.8.1"
+		"typescript": "^5.8.3"
 	},
 	"dependencies": {
 		"cli-table3": "^0.6.5"
